@@ -12,10 +12,7 @@ export function Header() {
       <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-[#E70606] rounded">
-              <span className="font-bold text-white text-lg">A</span>
-            </div>
-            <span className="font-krona text-xl md:text-2xl text-white">ANIMAZIONS</span>
+            <img src="https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png" alt="Animazions Logo" className="h-10 md:h-12" />
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
