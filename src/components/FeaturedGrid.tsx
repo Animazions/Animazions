@@ -7,7 +7,7 @@ const featuredItems = [
     genre: 'Action',
     duration: '8:45',
     rating: 4.9,
-    image: 'https://static0.moviewebimages.com/wordpress/wp-content/uploads/2023/02/a-scene-from-howls.jpg',
+    image: 'https://i.postimg.cc/Nj4nGdw0/videoframe-3400.png',
   },
   {
     id: 2,
