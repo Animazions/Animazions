@@ -6,7 +6,7 @@ export function Footer() {
       <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24 py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           <div className="space-y-6">
-            <img src="https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png" alt="Animazions Logo" className="h-8" />
+            <img src="https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png" alt="Animazions Logo" className="h-12" />
             <p className="text-gray-400 font-jost leading-relaxed">
               The world's first Web 3.0 animation streaming and tokenization platform.
               Own, trade, and enjoy premium content.
