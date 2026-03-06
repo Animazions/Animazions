@@ -3,7 +3,7 @@ import { Play, Clock, Star } from 'lucide-react';
 const featuredItems = [
   {
     id: 1,
-    title: 'Create AI Animation',
+    title: 'Warhammer 40K vs. Leonardo',
     genre: 'Action',
     duration: '8:45',
     rating: 4.9,
