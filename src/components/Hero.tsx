@@ -42,11 +42,10 @@ export function Hero() {
           <div className="relative">
             <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl overflow-hidden border border-gray-700 relative group cursor-pointer">
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-              <img
-                src="https://animazions.com/wp-content/uploads/2025/10/Images-min.png"
-                alt="Featured animation"
+              <video
+                src="https://video.twimg.com/amplify_video/2026384571449978880/vid/avc1/1920x1080/NaWq7ff7E5CmJ4a2.mp4?tag=21"
                 className="w-full h-full object-cover"
-              />
+              ></video>
               <div className="absolute inset-0 flex items-center justify-center">
                 <button className="w-20 h-20 bg-[#E70606] hover:bg-white hover:text-black rounded-full flex items-center justify-center transition-all group-hover:scale-110 border-4 border-white">
                   <Play className="w-8 h-8 fill-current ml-1" />
