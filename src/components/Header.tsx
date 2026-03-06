@@ -26,7 +26,7 @@ export function Header() {
               Launch Events
             </a>
             <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
-              Explore Streaming
+              Explore
             </a>
             <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
               About
@@ -56,7 +56,7 @@ export function Header() {
               Launch Events
             </a>
             <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
-              Explore Streaming
+              Explore
             </a>
             <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
               About
