@@ -13,7 +13,7 @@ const features = [
   },
   {
     icon: Coins,
-    title: 'NFT Marketplace',
+    title: 'Create AI Animation',
     description: 'Buy, sell, and trade animation NFTs seamlessly',
   },
   {
