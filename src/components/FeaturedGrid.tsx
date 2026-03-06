@@ -27,7 +27,7 @@ const featuredItems = [
   },
   {
     id: 4,
-    title: 'Urban Legends',
+    title: 'Stranger Things: AI Finale',
     genre: 'Mystery',
     duration: '11:30',
     rating: 4.6,
