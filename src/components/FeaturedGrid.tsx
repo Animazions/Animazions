@@ -3,7 +3,7 @@ import { Play, Clock, Star } from 'lucide-react';
 const featuredItems = [
   {
     id: 1,
-    title: 'Neon Nights',
+    title: 'Create AI Animation',
     genre: 'Action',
     duration: '8:45',
     rating: 4.9,
