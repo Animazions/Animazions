@@ -55,11 +55,11 @@ export function Hero() {
               <div className="absolute bottom-6 left-6 right-6">
                 <h3 className="font-jost text-xl font-bold mb-2">Featured: Classic Animations</h3>
                 <div className="flex items-center gap-4 text-sm text-gray-300">
-                  <span className="font-chakra uppercase">Sci-Fi</span>
+                  <span className="font-chakra uppercase">Family Fun</span>
                   <span>•</span>
                   <span>12:34</span>
                   <span>•</span>
-                  <span>4.8★</span>
+                  <span>5★</span>
                 </div>
               </div>
             </div>
