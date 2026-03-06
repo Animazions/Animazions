@@ -31,7 +31,7 @@ const featuredItems = [
     genre: 'Mystery',
     duration: '11:30',
     rating: 4.6,
-    image: 'https://images.pexels.com/photos/1105766/pexels-photo-1105766.jpeg?auto=compress&cs=tinysrgb&w=800',
+    image: 'https://i.postimg.cc/Yqq3tM8D/Stranger-things-AI-Finale.jpg',
   },
   {
     id: 5,
