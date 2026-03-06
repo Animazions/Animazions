@@ -8,7 +8,7 @@ const featuredItems = [
     duration: '3:20',
     rating: 4.9,
     image: 'https://images.pexels.com/photos/3394650/pexels-photo-3394650.jpeg?auto=compress&cs=tinysrgb&w=800',
-    video: 'https://video.twimg.com/amplify_video/2026384571449978880/vid/avc1/1920x1080/NaWq7ff7E5CmJ4a2.mp4?tag=21',
+    video: 'https://jumpshare.com/s/S7JeWOa5XMhPi0u6ZLwt',
   },
   {
     id: 2,
