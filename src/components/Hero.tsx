@@ -9,7 +9,6 @@ export function Hero() {
             <h1 className="font-krona text-4xl md:text-5xl lg:text-6xl leading-tight">
               THE FUTURE OF
               <span className="block text-[#E70606]">ANIMATION</span>
-              <span className="block">STREAMING</span>
             </h1>
             <p className="text-gray-300 text-lg md:text-xl font-jost max-w-xl">
               Experience Web 3.0 powered traditional and AI animation streaming and tokenization. Own, Trade and showcase your favorite animations on the blockchain.
