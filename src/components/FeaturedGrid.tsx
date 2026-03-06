@@ -23,7 +23,7 @@ const featuredItems = [
     genre: 'Sci-Fi',
     duration: '22:10',
     rating: 4.8,
-    image: 'https://images.pexels.com/photos/2159/flight-sky-earth-space.jpg?auto=compress&cs=tinysrgb&w=800',
+    image: 'https://i.postimg.cc/nzRkNW7P/ploop.jpg',
   },
   {
     id: 4,
