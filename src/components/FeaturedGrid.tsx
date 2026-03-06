@@ -1,15 +1,13 @@
 import { Play, Clock, Star } from 'lucide-react';
-import { useState } from 'react';
 
 const featuredItems = [
   {
     id: 1,
-    title: 'Gaming Harmony',
-    genre: 'Tech',
-    duration: '3:20',
+    title: 'Neon Nights',
+    genre: 'Action',
+    duration: '8:45',
     rating: 4.9,
-    image: 'https://images.pexels.com/photos/3394650/pexels-photo-3394650.jpeg?auto=compress&cs=tinysrgb&w=800',
-    video: 'https://jumpshare.com/s/S7JeWOa5XMhPi0u6ZLwt',
+    image: 'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
     id: 2,
@@ -54,8 +52,6 @@ const featuredItems = [
 ];
 
 export function FeaturedGrid() {
-  const [playingId, setPlayingId] = useState<number | null>(null);
-
   return (
     <section className="py-20 px-6 md:px-12 lg:px-24 bg-gradient-to-b from-black to-gray-900">
       <div className="max-w-[1440px] mx-auto">
@@ -80,28 +76,14 @@ export function FeaturedGrid() {
               className="group relative bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 hover:border-[#E70606] transition-all hover:scale-105 cursor-pointer"
             >
               <div className="aspect-video relative overflow-hidden">
-                {item.video ? (
-                  <video
-                    src={item.video}
-                    poster={item.image}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    preload="metadata"
-                    controls={playingId === item.id}
-                    autoPlay={playingId === item.id}
-                  />
-                ) : (
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                )}
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => setPlayingId(playingId === item.id ? null : item.id)}
-                    className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white"
-                  >
+                  <button className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white">
                     <Play className="w-6 h-6 fill-current ml-1" />
                   </button>
                 </div>
