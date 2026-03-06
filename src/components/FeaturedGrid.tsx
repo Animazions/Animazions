@@ -15,7 +15,7 @@ const featuredItems = [
     genre: 'Fantasy',
     duration: '15:20',
     rating: 4.7,
-    image: 'https://images.pexels.com/photos/1629236/pexels-photo-1629236.jpeg?auto=compress&cs=tinysrgb&w=800',
+    image: 'https://static0.moviewebimages.com/wordpress/wp-content/uploads/2023/02/a-scene-from-howls.jpg',
   },
   {
     id: 3,
