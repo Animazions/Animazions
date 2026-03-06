@@ -3,11 +3,12 @@ import { Play, Clock, Star } from 'lucide-react';
 const featuredItems = [
   {
     id: 1,
-    title: 'Neon Nights',
-    genre: 'Action',
-    duration: '8:45',
+    title: 'Gaming Harmony',
+    genre: 'Tech',
+    duration: '3:20',
     rating: 4.9,
-    image: 'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?auto=compress&cs=tinysrgb&w=800',
+    image: 'https://images.pexels.com/photos/3394650/pexels-photo-3394650.jpeg?auto=compress&cs=tinysrgb&w=800',
+    video: 'https://video.twimg.com/amplify_video/2026384571449978880/vid/avc1/1920x1080/NaWq7ff7E5CmJ4a2.mp4?tag=21',
   },
   {
     id: 2,
@@ -76,11 +77,20 @@ export function FeaturedGrid() {
               className="group relative bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 hover:border-[#E70606] transition-all hover:scale-105 cursor-pointer"
             >
               <div className="aspect-video relative overflow-hidden">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+                {item.video ? (
+                  <video
+                    src={item.video}
+                    poster={item.image}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    preload="metadata"
+                  />
+                ) : (
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <button className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white">
