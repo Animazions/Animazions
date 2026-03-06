@@ -14,7 +14,7 @@ const features = [
   {
     icon: Coins,
     title: 'Create AI Animation',
-    description: 'Buy, sell, and trade animation NFTs seamlessly',
+    description: 'Create amazing animations via our tool using various popular models with step by step prompt guides',
   },
   {
     icon: Users,
