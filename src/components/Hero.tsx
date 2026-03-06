@@ -53,7 +53,7 @@ export function Hero() {
                 </button>
               </div>
               <div className="absolute bottom-6 left-6 right-6">
-                <h3 className="font-jost text-xl font-bold mb-2">Featured: Cyberpunk Dreams</h3>
+                <h3 className="font-jost text-xl font-bold mb-2">Featured: Classic Animations</h3>
                 <div className="flex items-center gap-4 text-sm text-gray-300">
                   <span className="font-chakra uppercase">Sci-Fi</span>
                   <span>•</span>
