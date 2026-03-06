@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-black text-white;
+    font-family: 'Jost', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Jost', sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-jost {
+    font-family: 'Jost', sans-serif;
+  }
+
+  .font-chakra {
+    font-family: 'Chakra Petch', sans-serif;
+  }
+
+  .font-krona {
+    font-family: 'Krona One', cursive;
+  }
+}
