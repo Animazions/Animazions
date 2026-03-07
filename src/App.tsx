@@ -1,4 +1,3 @@
-import { Play, Film, Sparkles, Shield, Coins, Users, TrendingUp, Globe } from 'lucide-react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { FeaturedGrid } from './components/FeaturedGrid';
