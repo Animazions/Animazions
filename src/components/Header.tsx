@@ -33,7 +33,7 @@ export function Header({ onNavigate }: HeaderProps) {
               Explore Streaming
             </button>
             <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
-              About
+              Home
             </button>
             <ConnectWallet
               theme="dark"
@@ -65,7 +65,7 @@ export function Header({ onNavigate }: HeaderProps) {
               Explore Streaming
             </button>
             <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
-              About
+              Home
             </button>
             <ConnectWallet
               theme="dark"
