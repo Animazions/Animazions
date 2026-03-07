@@ -39,7 +39,7 @@ const featuredItems = [
     genre: 'Adventure',
     duration: '18:55',
     rating: 4.9,
-    image: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=800',
+    image: 'https://i.postimg.cc/s27p5dS5/animefight.png',
   },
   {
     id: 6,
