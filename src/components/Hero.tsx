@@ -57,7 +57,7 @@ export function Hero({ onNavigate }: HeroProps) {
                 )}
               </button>
               <button className="border border-white hover:bg-white hover:text-black px-8 py-4 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
-                Learn More
+                Create AI Animation
               </button>
             </div>
             <div className="flex gap-8 pt-6">
