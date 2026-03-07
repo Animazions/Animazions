@@ -1,5 +1,6 @@
 import { Clock, Users, Target, TrendingUp, Shield, Zap, Heart, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { getSaleById } from '../data/salesData';
 
 interface TokenSaleDetailProps {
   saleId?: number;
@@ -11,33 +12,10 @@ export function TokenSaleDetail({ saleId = 1, onNavigate }: TokenSaleDetailProps
   const [activeTab, setActiveTab] = useState('details');
   const [liked, setLiked] = useState(false);
 
-  const sale = {
-    id: saleId,
-    name: 'Nebula Protocol',
-    symbol: 'NBL',
-    description: 'Nebula Protocol is a next-generation DeFi platform that leverages AI-powered trading strategies and decentralized liquidity management.',
-    longDescription: 'Nebula Protocol represents a paradigm shift in decentralized finance. By combining advanced machine learning algorithms with blockchain technology, we\'re building a platform that offers unparalleled trading efficiency and capital optimization. Our mission is to democratize access to institutional-grade trading tools.',
-    image: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=600',
-    category: 'DeFi',
-    status: 'Active',
-    progress: 75,
-    raised: 125000,
-    goal: 200000,
-    participants: 3420,
-    endDate: '2 days',
-    tokenPrice: '0.25',
-    minBuy: '100',
-    maxBuy: '10000',
-    totalSupply: '1000000000',
-    burnRate: '20%',
-    liquidityLock: '2 years',
-    website: 'https://nebula.protocol',
-    socials: {
-      twitter: '#',
-      discord: '#',
-      telegram: '#',
-    },
-  };
+  const sale = useMemo(() => {
+    const found = getSaleById(saleId);
+    return found || getSaleById(1);
+  }, [saleId]);
 
   const handleBuy = () => {
     if (amount && parseFloat(amount) > 0) {

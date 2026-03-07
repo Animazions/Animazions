@@ -1,89 +1,9 @@
 import { TrendingUp, Users, Clock, Target } from 'lucide-react';
+import { salesData } from '../data/salesData';
 
 interface LaunchEventsProps {
   onNavigate?: (page: string, saleId?: number) => void;
 }
-
-const sales = [
-  {
-    id: 1,
-    name: 'Nebula Protocol',
-    symbol: 'NBL',
-    image: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=200',
-    progress: 75,
-    raised: '125,000',
-    goal: '200,000',
-    participants: 3420,
-    status: 'Active',
-    endDate: '2 days',
-    category: 'DeFi',
-  },
-  {
-    id: 2,
-    name: 'Stellar AI',
-    symbol: 'STL',
-    image: 'https://images.pexels.com/photos/1939485/pexels-photo-1939485.jpeg?auto=compress&cs=tinysrgb&w=200',
-    progress: 92,
-    raised: '180,000',
-    goal: '200,000',
-    participants: 5610,
-    status: 'Active',
-    endDate: '1 day',
-    category: 'AI',
-  },
-  {
-    id: 3,
-    name: 'Quantum Vault',
-    symbol: 'QVT',
-    image: 'https://images.pexels.com/photos/3782517/pexels-photo-3782517.jpeg?auto=compress&cs=tinysrgb&w=200',
-    progress: 45,
-    raised: '85,500',
-    goal: '200,000',
-    participants: 1850,
-    status: 'Active',
-    endDate: '5 days',
-    category: 'Security',
-  },
-  {
-    id: 4,
-    name: 'Pixel Studios',
-    symbol: 'PIX',
-    image: 'https://images.pexels.com/photos/3183183/pexels-photo-3183183.jpeg?auto=compress&cs=tinysrgb&w=200',
-    progress: 60,
-    raised: '120,000',
-    goal: '200,000',
-    participants: 2940,
-    status: 'Active',
-    endDate: '3 days',
-    category: 'Gaming',
-  },
-  {
-    id: 5,
-    name: 'Crypto Lens',
-    symbol: 'CLN',
-    image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?auto=compress&cs=tinysrgb&w=200',
-    progress: 88,
-    raised: '175,000',
-    goal: '200,000',
-    participants: 4720,
-    status: 'Active',
-    endDate: '6 hours',
-    category: 'Analytics',
-  },
-  {
-    id: 6,
-    name: 'MetaVerse X',
-    symbol: 'MVX',
-    image: 'https://images.pexels.com/photos/3844787/pexels-photo-3844787.jpeg?auto=compress&cs=tinysrgb&w=200',
-    progress: 35,
-    raised: '70,000',
-    goal: '200,000',
-    participants: 1230,
-    status: 'Active',
-    endDate: '4 days',
-    category: 'Metaverse',
-  },
-];
 
 export function LaunchEvents({ onNavigate }: LaunchEventsProps) {
   const handleJoinSale = (saleId: number) => {
@@ -106,7 +26,7 @@ export function LaunchEvents({ onNavigate }: LaunchEventsProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sales.map((sale) => (
+            {salesData.map((sale) => (
               <div
                 key={sale.id}
                 className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl overflow-hidden border border-gray-700 hover:border-[#E70606] transition-all hover:shadow-xl hover:shadow-[#E70606]/20"
