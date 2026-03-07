@@ -1,6 +1,14 @@
 import { X, Loader } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useConnect } from '@thirdweb-dev/react';
+import { useState } from 'react';
+import {
+  useConnect,
+  metamaskWallet,
+  coinbaseWallet,
+  walletConnect,
+  trustWallet,
+  rainbowWallet,
+  phantomWallet,
+} from '@thirdweb-dev/react';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -8,36 +16,37 @@ interface WalletModalProps {
   onConnect: () => void;
 }
 
+const walletConfigs = [
+  { config: metamaskWallet(), name: 'MetaMask', description: 'Browser extension & mobile', icon: '🦊' },
+  { config: coinbaseWallet(), name: 'Coinbase Wallet', description: 'Connect with Coinbase', icon: '💎' },
+  { config: walletConnect(), name: 'WalletConnect', description: 'Scan QR to connect', icon: '🔗' },
+  { config: trustWallet(), name: 'Trust Wallet', description: 'Mobile crypto wallet', icon: '🛡️' },
+  { config: rainbowWallet(), name: 'Rainbow', description: 'A fun, simple wallet', icon: '🌈' },
+  { config: phantomWallet(), name: 'Phantom', description: 'Solana & EVM wallet', icon: '👻' },
+];
+
 export function WalletModal({ isOpen, onClose, onConnect }: WalletModalProps) {
-  const { connect, isConnecting } = useConnect();
-  const [selectedError, setSelectedError] = useState<string | null>(null);
-  const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+  const connect = useConnect();
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const wallets = [
-    { id: 'io.metamask', name: 'MetaMask', icon: '🦊' },
-    { id: 'com.coinbase.wallet', name: 'Coinbase Wallet', icon: '💎' },
-    { id: 'walletconnect', name: 'WalletConnect', icon: '🔗' },
-    { id: 'com.phantom', name: 'Phantom', icon: '👻' },
-    { id: 'io.rainbow', name: 'Rainbow', icon: '🌈' },
-    { id: 'com.trustwallet', name: 'Trust Wallet', icon: '🛡️' },
-  ];
+  if (!isOpen) return null;
 
-  const handleWalletConnect = async (walletId: string) => {
+  const handleConnect = async (walletName: string, config: (typeof walletConfigs)[0]['config']) => {
     try {
-      setSelectedError(null);
-      setConnectingWallet(walletId);
-      await connect({ walletId });
+      setError(null);
+      setConnectingId(walletName);
+      await connect(config, {});
       onConnect();
-      setTimeout(() => onClose(), 1000);
+      onClose();
     } catch (err: any) {
-      setSelectedError(err?.message || 'Failed to connect wallet. Please try again.');
-      console.error(err);
+      setError(err?.message || 'Failed to connect. Please try again.');
     } finally {
-      setConnectingWallet(null);
+      setConnectingId(null);
     }
   };
 
-  if (!isOpen) return null;
+  const isConnecting = connectingId !== null;
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -53,42 +62,42 @@ export function WalletModal({ isOpen, onClose, onConnect }: WalletModalProps) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <p className="text-gray-300 font-jost mb-6">
+        <div className="p-6 space-y-3">
+          <p className="text-gray-300 font-jost mb-4">
             Choose a wallet to connect to Animazions
           </p>
 
-          {selectedError && (
-            <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 mb-4">
-              <p className="text-red-300 text-sm font-jost">{selectedError}</p>
+          {error && (
+            <div className="bg-red-900/30 border border-red-700 rounded-lg p-3">
+              <p className="text-red-300 text-sm font-jost">{error}</p>
             </div>
           )}
 
-          {wallets.map((wallet) => (
+          {walletConfigs.map(({ config, name, description, icon }) => (
             <button
-              key={wallet.id}
-              onClick={() => handleWalletConnect(wallet.id)}
+              key={name}
+              onClick={() => handleConnect(name, config)}
               disabled={isConnecting}
               className="w-full p-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-[#E70606] rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-4">
-                <span className="text-3xl">{wallet.icon}</span>
+                <span className="text-2xl w-10 text-center">{icon}</span>
                 <div className="text-left flex-1">
                   <h3 className="font-jost font-bold group-hover:text-[#E70606] transition-colors">
-                    {wallet.name}
+                    {name}
                   </h3>
                   <p className="text-gray-400 text-sm font-jost">
-                    {connectingWallet === wallet.id ? 'Connecting...' : 'Click to connect'}
+                    {connectingId === name ? 'Connecting...' : description}
                   </p>
                 </div>
-                {connectingWallet === wallet.id && isConnecting && (
-                  <Loader className="w-4 h-4 animate-spin text-[#E70606]" />
+                {connectingId === name && (
+                  <Loader className="w-4 h-4 animate-spin text-[#E70606] shrink-0" />
                 )}
               </div>
             </button>
           ))}
 
-          <div className="pt-4 border-t border-gray-700 mt-6">
+          <div className="pt-4 border-t border-gray-700">
             <p className="text-xs text-gray-400 text-center font-jost">
               By connecting a wallet, you agree to our Terms of Service and Privacy Policy
             </p>
