@@ -2,13 +2,22 @@ import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { WalletModal } from './WalletModal';
 
-export function Header() {
+interface HeaderProps {
+  onNavigate?: (page: string) => void;
+}
+
+export function Header({ onNavigate }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
 
   const handleConnect = (wallet: string) => {
     setConnectedWallet(wallet);
+  };
+
+  const handleNavigate = (page: string) => {
+    if (onNavigate) onNavigate(page);
+    setMenuOpen(false);
   };
 
   return (
@@ -21,18 +30,18 @@ export function Header() {
             </div>
 
             <nav className="hidden md:flex items-center gap-8">
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
                 Create AI Animation
-              </a>
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              </button>
+              <button onClick={() => handleNavigate('launch')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
                 Launch Events
-              </a>
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              </button>
+              <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
                 Explore Streaming
-              </a>
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              </button>
+              <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
                 About
-              </a>
+              </button>
               <button
                 onClick={() => setWalletOpen(true)}
                 className="bg-[#E70606] hover:bg-[#c00505] px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors"
@@ -51,18 +60,18 @@ export function Header() {
 
           {menuOpen && (
             <nav className="md:hidden flex flex-col gap-4 mt-6 pb-4">
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
                 Create AI Animation
-              </a>
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              </button>
+              <button onClick={() => handleNavigate('launch')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
                 Launch Events
-              </a>
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              </button>
+              <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
                 Explore Streaming
-              </a>
-              <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
+              </button>
+              <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
                 About
-              </a>
+              </button>
               <button
                 onClick={() => { setWalletOpen(true); setMenuOpen(false); }}
                 className="bg-[#E70606] hover:bg-[#c00505] px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors w-full"
