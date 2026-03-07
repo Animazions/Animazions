@@ -35,7 +35,7 @@ const featuredItems = [
   },
   {
     id: 5,
-    title: 'Digital Frontier',
+    title: 'Sazuka: AI Anime Fight',
     genre: 'Adventure',
     duration: '18:55',
     rating: 4.9,
