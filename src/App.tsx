@@ -17,6 +17,7 @@ import { Features } from './components/Features';
 import { Footer } from './components/Footer';
 import { LaunchEvents } from './components/LaunchEvents';
 import { StreamingExplore } from './components/StreamingExplore';
+import { TokenSaleDetail } from './components/TokenSaleDetail';
 
 const queryClient = new QueryClient();
 
@@ -39,20 +40,30 @@ const supportedChains = [
 
 function AppInner() {
   const [currentPage, setCurrentPage] = useState('home');
+  const [selectedSaleId, setSelectedSaleId] = useState<number | undefined>(undefined);
+
+  const handleNavigate = (page: string, saleId?: number) => {
+    setCurrentPage(page);
+    if (saleId) {
+      setSelectedSaleId(saleId);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Header onNavigate={setCurrentPage} />
+      <Header onNavigate={handleNavigate} />
       {currentPage === 'home' ? (
         <>
-          <Hero onNavigate={setCurrentPage} />
+          <Hero onNavigate={handleNavigate} />
           <FeaturedGrid />
           <Features />
         </>
       ) : currentPage === 'launch' ? (
-        <LaunchEvents />
+        <LaunchEvents onNavigate={handleNavigate} />
       ) : currentPage === 'streaming' ? (
         <StreamingExplore />
+      ) : currentPage === 'sale' ? (
+        <TokenSaleDetail saleId={selectedSaleId} onNavigate={handleNavigate} />
       ) : null}
       <Footer />
     </div>

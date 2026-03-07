@@ -1,5 +1,9 @@
 import { TrendingUp, Users, Clock, Target } from 'lucide-react';
 
+interface LaunchEventsProps {
+  onNavigate?: (page: string, saleId?: number) => void;
+}
+
 const sales = [
   {
     id: 1,
@@ -81,7 +85,13 @@ const sales = [
   },
 ];
 
-export function LaunchEvents() {
+export function LaunchEvents({ onNavigate }: LaunchEventsProps) {
+  const handleJoinSale = (saleId: number) => {
+    if (onNavigate) {
+      onNavigate('sale', saleId);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pt-24">
       <section className="py-12 px-6 md:px-12 lg:px-24">
@@ -166,7 +176,10 @@ export function LaunchEvents() {
                     </div>
                   </div>
 
-                  <button className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra uppercase text-sm py-3 rounded-lg transition-colors font-bold tracking-wider">
+                  <button
+                    onClick={() => handleJoinSale(sale.id)}
+                    className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra uppercase text-sm py-3 rounded-lg transition-colors font-bold tracking-wider"
+                  >
                     Join Sale
                   </button>
                 </div>
