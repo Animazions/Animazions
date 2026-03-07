@@ -29,7 +29,7 @@ const features = [
   {
     icon: Zap,
     title: 'Community Ownership',
-    description: 'Lightning-fast playback with zero buffering',
+    description: 'Fractional ownership in animations you love! Enjoy all the benefits that come with ownership',
   },
 ];
 
