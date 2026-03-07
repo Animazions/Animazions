@@ -47,7 +47,7 @@ const featuredItems = [
     genre: 'Fantasy',
     duration: '14:25',
     rating: 4.7,
-    image: 'https://images.pexels.com/photos/1939485/pexels-photo-1939485.jpeg?auto=compress&cs=tinysrgb&w=800',
+    image: 'https://static0.moviewebimages.com/wordpress/wp-content/uploads/2023/08/the-most-visually-stunning-anime-ranked.jpg',
   },
 ];
 
