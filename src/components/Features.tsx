@@ -28,7 +28,7 @@ const features = [
   },
   {
     icon: Zap,
-    title: 'Instant Streaming',
+    title: 'Community Ownership',
     description: 'Lightning-fast playback with zero buffering',
   },
 ];
