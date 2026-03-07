@@ -39,10 +39,10 @@ export function useAvaxBalance() {
         const data = await response.json();
         if (data.result) {
           const balanceInWei = BigInt(data.result);
-          const divisor = BigInt(10 ** AVAX_DECIMALS);
+          const divisor = BigInt('1000000000000000000');
           const whole = balanceInWei / divisor;
           const remainder = balanceInWei % divisor;
-          const balanceInAvax = Number(whole) + Number(remainder) / (10 ** AVAX_DECIMALS);
+          const balanceInAvax = Number(whole) + Number(remainder) / 1e18;
           setBalance(Math.round(balanceInAvax * 10000) / 10000);
         }
       } catch (err) {
