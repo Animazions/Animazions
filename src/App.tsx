@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ThirdwebProvider,
   metamaskWallet,
@@ -16,6 +17,8 @@ import { Features } from './components/Features';
 import { Footer } from './components/Footer';
 import { LaunchEvents } from './components/LaunchEvents';
 import { StreamingExplore } from './components/StreamingExplore';
+
+const queryClient = new QueryClient();
 
 const supportedWallets = [
   metamaskWallet(),
@@ -50,9 +53,11 @@ function AppInner() {
 
 function App() {
   return (
-    <ThirdwebProvider activeChain={Avalanche} supportedWallets={supportedWallets}>
-      <AppInner />
-    </ThirdwebProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThirdwebProvider activeChain={Avalanche} supportedWallets={supportedWallets}>
+        <AppInner />
+      </ThirdwebProvider>
+    </QueryClientProvider>
   );
 }
 
