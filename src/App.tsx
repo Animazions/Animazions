@@ -17,7 +17,6 @@ import { Features } from './components/Features';
 import { Footer } from './components/Footer';
 import { LaunchEvents } from './components/LaunchEvents';
 import { StreamingExplore } from './components/StreamingExplore';
-import { NetworkSelector } from './components/NetworkSelector';
 
 const queryClient = new QueryClient();
 
@@ -40,12 +39,10 @@ const supportedChains = [
 
 function AppInner() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [showNetworkSelector, setShowNetworkSelector] = useState(true);
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Header onNavigate={setCurrentPage} onShowNetworkSelector={() => setShowNetworkSelector(true)} />
-      {showNetworkSelector && <NetworkSelector onClose={() => setShowNetworkSelector(false)} />}
+      <Header onNavigate={setCurrentPage} />
       {currentPage === 'home' ? (
         <>
           <Hero onNavigate={setCurrentPage} />
