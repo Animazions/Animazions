@@ -5,6 +5,7 @@ import { FeaturedGrid } from './components/FeaturedGrid';
 import { Features } from './components/Features';
 import { Footer } from './components/Footer';
 import { LaunchEvents } from './components/LaunchEvents';
+import { ExploreStreaming } from './components/ExploreStreaming';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -18,8 +19,10 @@ function App() {
           <FeaturedGrid />
           <Features />
         </>
-      ) : (
+      ) : currentPage === 'launch' ? (
         <LaunchEvents />
+      ) : (
+        <ExploreStreaming />
       )}
       <Footer />
     </div>
