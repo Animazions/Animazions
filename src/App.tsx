@@ -9,7 +9,7 @@ import {
   rainbowWallet,
   phantomWallet,
 } from '@thirdweb-dev/react';
-import { Avalanche } from '@thirdweb-dev/chains';
+import { Avalanche, Ethereum, Polygon, Arbitrum, Optimism } from '@thirdweb-dev/chains';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { FeaturedGrid } from './components/FeaturedGrid';
@@ -17,6 +17,7 @@ import { Features } from './components/Features';
 import { Footer } from './components/Footer';
 import { LaunchEvents } from './components/LaunchEvents';
 import { StreamingExplore } from './components/StreamingExplore';
+import { NetworkSelector } from './components/NetworkSelector';
 
 const queryClient = new QueryClient();
 
@@ -29,12 +30,22 @@ const supportedWallets = [
   phantomWallet(),
 ];
 
+const supportedChains = [
+  Avalanche,
+  Ethereum,
+  Polygon,
+  Arbitrum,
+  Optimism,
+];
+
 function AppInner() {
   const [currentPage, setCurrentPage] = useState('home');
+  const [showNetworkSelector, setShowNetworkSelector] = useState(true);
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Header onNavigate={setCurrentPage} />
+      <Header onNavigate={setCurrentPage} onShowNetworkSelector={() => setShowNetworkSelector(true)} />
+      {showNetworkSelector && <NetworkSelector onClose={() => setShowNetworkSelector(false)} />}
       {currentPage === 'home' ? (
         <>
           <Hero onNavigate={setCurrentPage} />
@@ -54,7 +65,7 @@ function AppInner() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThirdwebProvider activeChain={Avalanche} supportedWallets={supportedWallets}>
+      <ThirdwebProvider supportedChains={supportedChains} supportedWallets={supportedWallets}>
         <AppInner />
       </ThirdwebProvider>
     </QueryClientProvider>

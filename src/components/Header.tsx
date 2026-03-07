@@ -1,16 +1,24 @@
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
-import { ConnectWallet } from '@thirdweb-dev/react';
+import { ConnectWallet, useDisconnect } from '@thirdweb-dev/react';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
+  onShowNetworkSelector?: () => void;
 }
 
-export function Header({ onNavigate }: HeaderProps) {
+export function Header({ onNavigate, onShowNetworkSelector }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const disconnect = useDisconnect();
 
   const handleNavigate = (page: string) => {
     if (onNavigate) onNavigate(page);
+    setMenuOpen(false);
+  };
+
+  const handleDisconnect = async () => {
+    await disconnect();
+    if (onShowNetworkSelector) onShowNetworkSelector();
     setMenuOpen(false);
   };
 
@@ -35,14 +43,22 @@ export function Header({ onNavigate }: HeaderProps) {
             <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
               About
             </button>
-            <ConnectWallet
-              theme="dark"
-              btnTitle="Connect Wallet"
-              modalTitle="Connect Your Wallet"
-              switchToActiveChain={true}
-              showThirdwebBranding={false}
-              className="!bg-[#E70606] hover:!bg-[#c00505] !px-6 !py-2 !rounded-lg !font-chakra !text-sm !uppercase !tracking-wider !transition-colors"
-            />
+            <div className="flex items-center gap-2">
+              <ConnectWallet
+                theme="dark"
+                btnTitle="Connect Wallet"
+                modalTitle="Connect Your Wallet"
+                switchToActiveChain={false}
+                showThirdwebBranding={false}
+                className="!bg-[#E70606] hover:!bg-[#c00505] !px-6 !py-2 !rounded-lg !font-chakra !text-sm !uppercase !tracking-wider !transition-colors"
+              />
+              <button
+                onClick={handleDisconnect}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors"
+              >
+                Switch
+              </button>
+            </div>
           </nav>
 
           <button
@@ -67,13 +83,21 @@ export function Header({ onNavigate }: HeaderProps) {
             <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
               About
             </button>
-            <ConnectWallet
-              theme="dark"
-              btnTitle="Connect Wallet"
-              modalTitle="Connect Your Wallet"
-              switchToActiveChain={true}
-              showThirdwebBranding={false}
-            />
+            <div className="flex flex-col gap-2">
+              <ConnectWallet
+                theme="dark"
+                btnTitle="Connect Wallet"
+                modalTitle="Connect Your Wallet"
+                switchToActiveChain={false}
+                showThirdwebBranding={false}
+              />
+              <button
+                onClick={handleDisconnect}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors"
+              >
+                Switch
+              </button>
+            </div>
           </nav>
         )}
       </div>
