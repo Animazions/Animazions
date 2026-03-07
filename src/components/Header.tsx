@@ -1,6 +1,7 @@
 import { Menu } from 'lucide-react';
-import { useState } from 'react';
-import { ConnectWallet } from '@thirdweb-dev/react';
+import { useState, lazy, Suspense } from 'react';
+
+const ConnectWallet = lazy(() => import('@thirdweb-dev/react').then(m => ({ default: m.ConnectWallet })));
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -26,11 +27,13 @@ export function Header() {
             <a href="#" className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors">
               About
             </a>
-            <ConnectWallet
-              btnTitle="Connect Wallet"
-              theme="dark"
-              modalTitle="Connect Your Wallet"
-            />
+            <Suspense fallback={<button className="bg-[#E70606] hover:bg-[#c00505] px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors">Connect Wallet</button>}>
+              <ConnectWallet
+                btnTitle="Connect Wallet"
+                theme="dark"
+                modalTitle="Connect Your Wallet"
+              />
+            </Suspense>
           </nav>
 
           <button
@@ -56,11 +59,13 @@ export function Header() {
               About
             </a>
             <div onClick={() => setMenuOpen(false)}>
-              <ConnectWallet
-                btnTitle="Connect Wallet"
-                theme="dark"
-                modalTitle="Connect Your Wallet"
-              />
+              <Suspense fallback={<button className="bg-[#E70606] hover:bg-[#c00505] px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors w-full">Connect Wallet</button>}>
+                <ConnectWallet
+                  btnTitle="Connect Wallet"
+                  theme="dark"
+                  modalTitle="Connect Your Wallet"
+                />
+              </Suspense>
             </div>
           </nav>
         )}
