@@ -72,7 +72,17 @@ export function StreamingExplore() {
   });
 
   return (
-    <section className="pt-32 pb-20 px-6 md:px-12 lg:px-24">
+    <section className="relative min-h-screen pt-32 pb-20 px-6 md:px-12 lg:px-24">
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <img
+          src="https://images.pexels.com/photos/1440404/pexels-photo-1440404.jpeg?auto=compress&cs=tinysrgb&w=1200"
+          alt="Background"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/40"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black"></div>
+      </div>
+
       <div className="max-w-[1440px] mx-auto">
         <div className="mb-12 space-y-8">
           <div>
