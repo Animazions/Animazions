@@ -35,7 +35,7 @@ export function Hero({ onNavigate }: HeroProps) {
               <span className="block text-[#E70606]">ANIMATION</span>
             </h1>
             <p className="text-gray-300 text-lg md:text-xl font-jost max-w-xl">
-              Experience Web 3.0 powered traditional and AI animation streaming and tokenization. Own, Trade and showcase your favorite animations on the blockchain.
+              Experience Web 3.0 powered traditional and AI animation streaming and tokenization. Own, trade, create and showcase your favorite animations on the blockchain.
             </p>
             <div className="flex flex-wrap gap-4">
               <button
