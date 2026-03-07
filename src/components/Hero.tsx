@@ -1,6 +1,30 @@
+import { useState } from 'react';
 import { Play, TrendingUp, Users } from 'lucide-react';
+import { useAvaxBalance } from '../hooks/useAvaxBalance';
+import { AccessDeniedModal } from './AccessDeniedModal';
 
-export function Hero() {
+interface HeroProps {
+  onNavigate: (page: string) => void;
+}
+
+export function Hero({ onNavigate }: HeroProps) {
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const { balance, loading, hasAccess, minRequired, isConnected } = useAvaxBalance();
+
+  const handleStartWatching = () => {
+    if (!isConnected) {
+      setShowAccessModal(true);
+      return;
+    }
+
+    if (!hasAccess) {
+      setShowAccessModal(true);
+      return;
+    }
+
+    onNavigate('streaming');
+  };
+
   return (
     <section className="pt-32 pb-20 px-6 md:px-12 lg:px-24">
       <div className="max-w-[1440px] mx-auto">
@@ -14,8 +38,23 @@ export function Hero() {
               Experience Web 3.0 powered traditional and AI animation streaming and tokenization. Own, Trade and showcase your favorite animations on the blockchain.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="bg-[#E70606] hover:bg-[#c00505] px-8 py-4 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
-                Start Watching
+              <button
+                onClick={handleStartWatching}
+                disabled={loading}
+                className={`px-8 py-4 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 ${
+                  loading
+                    ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                    : 'bg-[#E70606] hover:bg-[#c00505]'
+                } relative`}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Checking Access
+                  </span>
+                ) : (
+                  'Start Watching'
+                )}
               </button>
               <button className="border border-white hover:bg-white hover:text-black px-8 py-4 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
                 Learn More
@@ -68,6 +107,14 @@ export function Hero() {
           </div>
         </div>
       </div>
+
+      <AccessDeniedModal
+        isOpen={showAccessModal}
+        onClose={() => setShowAccessModal(false)}
+        balance={balance}
+        minRequired={minRequired}
+        isConnected={isConnected}
+      />
     </section>
   );
 }

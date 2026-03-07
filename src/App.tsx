@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { ThirdwebProvider } from '@thirdweb-dev/react';
+import { Avalanche } from '@thirdweb-dev/chains';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { FeaturedGrid } from './components/FeaturedGrid';
@@ -11,21 +13,23 @@ function App() {
   const [currentPage, setCurrentPage] = useState('home');
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <Header onNavigate={setCurrentPage} />
-      {currentPage === 'home' ? (
-        <>
-          <Hero />
-          <FeaturedGrid />
-          <Features />
-        </>
-      ) : currentPage === 'launch' ? (
-        <LaunchEvents />
-      ) : currentPage === 'streaming' ? (
-        <StreamingExplore />
-      ) : null}
-      <Footer />
-    </div>
+    <ThirdwebProvider activeChain={Avalanche}>
+      <div className="min-h-screen bg-black text-white">
+        <Header onNavigate={setCurrentPage} />
+        {currentPage === 'home' ? (
+          <>
+            <Hero onNavigate={setCurrentPage} />
+            <FeaturedGrid />
+            <Features />
+          </>
+        ) : currentPage === 'launch' ? (
+          <LaunchEvents />
+        ) : currentPage === 'streaming' ? (
+          <StreamingExplore />
+        ) : null}
+        <Footer />
+      </div>
+    </ThirdwebProvider>
   );
 }
 
