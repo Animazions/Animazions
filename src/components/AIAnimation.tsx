@@ -15,6 +15,7 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   const [moodboardImages, setMoodboardImages] = useState<string[]>([]);
   const [generatedVideos, setGeneratedVideos] = useState<string[]>([]);
   const [videoSequence, setVideoSequence] = useState<string[]>([]);
+  const [playingVideos, setPlayingVideos] = useState<boolean[]>([false, false, false, false]);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const imageModels = [
@@ -83,6 +84,25 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
     '/still27.jpg',
     '/still29.jpg',
     '/still_18.jpg'
+  ];
+
+  const communityVideos = [
+    {
+      src: 'https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4',
+      poster: 'https://images.pexels.com/videos/3129671/free-video-3129671.jpg'
+    },
+    {
+      src: 'https://videos.pexels.com/video-files/2022395/2022395-uhd_2560_1440_30fps.mp4',
+      poster: 'https://images.pexels.com/videos/2022395/free-video-2022395.jpg'
+    },
+    {
+      src: 'https://videos.pexels.com/video-files/3125914/3125914-uhd_2560_1440_30fps.mp4',
+      poster: 'https://images.pexels.com/videos/3125914/free-video-3125914.jpg'
+    },
+    {
+      src: 'https://videos.pexels.com/video-files/4625530/4625530-uhd_2560_1440_25fps.mp4',
+      poster: 'https://images.pexels.com/videos/4625530/free-video-4625530.jpg'
+    }
   ];
 
   return (
@@ -453,32 +473,35 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
         <section className="mb-16">
           <h2 className="font-krona text-2xl mb-6">COMMUNITY CREATED VIDEOS</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {['/video1.mp4', '/video2.mp4', '/video3.mp4', '/video4.mp4'].map((videoSrc, index) => (
+            {communityVideos.map((video, index) => (
               <div
                 key={index}
-                className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group cursor-pointer hover:border-[#E70606] transition-all"
+                className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group hover:border-[#E70606] transition-all"
               >
                 <video
                   ref={(el) => (videoRefs.current[index] = el)}
-                  src={videoSrc}
+                  src={video.src}
+                  poster={video.poster}
                   className="w-full h-full object-cover"
+                  onEnded={() => setPlayingVideos(prev => { const n = [...prev]; n[index] = false; return n; })}
+                  onPause={() => setPlayingVideos(prev => { const n = [...prev]; n[index] = false; return n; })}
+                  onPlay={() => setPlayingVideos(prev => { const n = [...prev]; n[index] = true; return n; })}
                 />
-                <button
-                  onClick={() => {
-                    if (videoRefs.current[index]) {
-                      if (videoRefs.current[index]!.paused) {
-                        videoRefs.current[index]!.play();
-                      } else {
-                        videoRefs.current[index]!.pause();
+                {!playingVideos[index] && (
+                  <button
+                    onClick={() => {
+                      const vid = videoRefs.current[index];
+                      if (vid) {
+                        vid.play();
                       }
-                    }
-                  }}
-                  className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-all group-hover:bg-black/40"
-                >
-                  <div className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Play className="w-8 h-8 fill-white" />
-                  </div>
-                </button>
+                    }}
+                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-all"
+                  >
+                    <div className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
+                      <Play className="w-8 h-8 fill-white text-white ml-1" />
+                    </div>
+                  </button>
+                )}
               </div>
             ))}
           </div>
