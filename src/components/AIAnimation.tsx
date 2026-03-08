@@ -121,10 +121,10 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   ];
 
   const communityVideos = [
-    { src: '/vid1.mp4' },
+    { src: '/vid4.mp4' },
     { src: '/vid2.mp4' },
     { src: '/vid3.mp4' },
-    { src: '/vid4.mp4' }
+    { src: '/vid1.mp4' }
   ];
 
   return (
