@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical } from 'lucide-react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard } from 'lucide-react';
 
 interface AIAnimationProps {
   onNavigate: (page: string) => void;
@@ -86,7 +86,37 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
 
   return (
     <div className="min-h-screen bg-black text-white pt-24 pb-20">
-      <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24">
+      <div className="flex gap-8 max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24">
+
+        {/* Left Sidebar */}
+        <div className="hidden lg:flex flex-col w-64 gap-4 pt-8">
+          <div className="space-y-3">
+            <button className="w-full bg-[#E70606] hover:bg-[#c00505] px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2">
+              <LogIn className="w-4 h-4" />
+              Login
+            </button>
+            <button className="w-full border border-gray-700 hover:border-[#E70606] hover:text-[#E70606] px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
+              Sign Up
+            </button>
+          </div>
+
+          <div className="border-t border-gray-800 pt-4">
+            <button className="w-full bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2 border border-gray-700 hover:border-[#E70606]">
+              <FolderOpen className="w-4 h-4" />
+              My Projects
+            </button>
+          </div>
+
+          <div>
+            <button className="w-full bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2 border border-gray-700 hover:border-[#E70606]">
+              <CreditCard className="w-4 h-4" />
+              Subscriptions
+            </button>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1">
 
         {/* Header */}
         <div className="mb-12">
@@ -439,6 +469,7 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
           </div>
         </section>
 
+        </div>
       </div>
     </div>
   );
