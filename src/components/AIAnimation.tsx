@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen, Play } from 'lucide-react';
 
 interface AIAnimationProps {
   onNavigate: (page: string) => void;
@@ -15,6 +15,7 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   const [moodboardImages, setMoodboardImages] = useState<string[]>([]);
   const [generatedVideos, setGeneratedVideos] = useState<string[]>([]);
   const [videoSequence, setVideoSequence] = useState<string[]>([]);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const imageModels = [
     'DALL-E 3',
@@ -458,14 +459,26 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
                 className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group cursor-pointer hover:border-[#E70606] transition-all"
               >
                 <video
+                  ref={(el) => (videoRefs.current[index] = el)}
                   src={videoSrc}
                   className="w-full h-full object-cover"
-                  controls
                 />
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                  <p className="font-chakra text-sm uppercase">AI Animation {index + 1}</p>
-                  <p className="text-xs text-gray-400 font-jost">Created by Community</p>
-                </div>
+                <button
+                  onClick={() => {
+                    if (videoRefs.current[index]) {
+                      if (videoRefs.current[index]!.paused) {
+                        videoRefs.current[index]!.play();
+                      } else {
+                        videoRefs.current[index]!.pause();
+                      }
+                    }
+                  }}
+                  className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-all group-hover:bg-black/40"
+                >
+                  <div className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Play className="w-8 h-8 fill-white" />
+                  </div>
+                </button>
               </div>
             ))}
           </div>
