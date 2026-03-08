@@ -76,12 +76,12 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   };
 
   const communityImages = [
-    'https://images.pexels.com/photos/1615776/pexels-photo-1615776.jpeg?auto=compress&cs=tinysrgb&w=600',
-    'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?auto=compress&cs=tinysrgb&w=600',
-    'https://images.pexels.com/photos/4194850/pexels-photo-4194850.jpeg?auto=compress&cs=tinysrgb&w=600',
-    'https://images.pexels.com/photos/8369658/pexels-photo-8369658.jpeg?auto=compress&cs=tinysrgb&w=600',
-    'https://images.pexels.com/photos/6069830/pexels-photo-6069830.jpeg?auto=compress&cs=tinysrgb&w=600',
-    'https://images.pexels.com/photos/6894439/pexels-photo-6894439.jpeg?auto=compress&cs=tinysrgb&w=600'
+    '/naruto.jpg',
+    '/sonic.jpg',
+    '/south-park.jpg',
+    '/still27.jpg',
+    '/still29.jpg',
+    '/still_18.jpg'
   ];
 
   return (
