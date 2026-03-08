@@ -87,22 +87,10 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   ];
 
   const communityVideos = [
-    {
-      src: 'https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4',
-      poster: 'https://images.pexels.com/videos/3129671/free-video-3129671.jpg'
-    },
-    {
-      src: 'https://videos.pexels.com/video-files/2022395/2022395-uhd_2560_1440_30fps.mp4',
-      poster: 'https://images.pexels.com/videos/2022395/free-video-2022395.jpg'
-    },
-    {
-      src: 'https://videos.pexels.com/video-files/3125914/3125914-uhd_2560_1440_30fps.mp4',
-      poster: 'https://images.pexels.com/videos/3125914/free-video-3125914.jpg'
-    },
-    {
-      src: 'https://videos.pexels.com/video-files/4625530/4625530-uhd_2560_1440_25fps.mp4',
-      poster: 'https://images.pexels.com/videos/4625530/free-video-4625530.jpg'
-    }
+    { src: '/vid1.mp4', poster: '/still_18.jpg' },
+    { src: '/vid2.mp4', poster: '/still27.jpg' },
+    { src: '/vid3.mp4', poster: '/still29.jpg' },
+    { src: '/vid4.mp4', poster: '/naruto.jpg' }
   ];
 
   return (

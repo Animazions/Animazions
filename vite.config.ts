@@ -1,8 +1,25 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
+
+const safePublicDir = path.resolve(__dirname, '.public-safe');
+
+function prepareSafePublic() {
+  if (!fs.existsSync(safePublicDir)) fs.mkdirSync(safePublicDir, { recursive: true });
+  const publicDir = path.resolve(__dirname, 'public');
+  for (const file of fs.readdirSync(publicDir)) {
+    if (file.includes(' copy')) continue;
+    const src = path.join(publicDir, file);
+    const dest = path.join(safePublicDir, file);
+    try { fs.copyFileSync(src, dest); } catch { /* skip */ }
+  }
+}
+
+prepareSafePublic();
 
 export default defineConfig({
+  publicDir: safePublicDir,
   plugins: [react()],
   resolve: {
     alias: {
