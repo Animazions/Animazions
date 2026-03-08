@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard } from 'lucide-react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen } from 'lucide-react';
 
 interface AIAnimationProps {
   onNavigate: (page: string) => void;
@@ -111,6 +111,13 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
             <button className="w-full bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2 border border-gray-700 hover:border-[#E70606]">
               <CreditCard className="w-4 h-4" />
               Subscriptions
+            </button>
+          </div>
+
+          <div>
+            <button className="w-full bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2 border border-gray-700 hover:border-[#E70606]">
+              <BookOpen className="w-4 h-4" />
+              Guides & Tutorials
             </button>
           </div>
         </div>
