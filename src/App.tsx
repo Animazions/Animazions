@@ -18,6 +18,7 @@ import { Footer } from './components/Footer';
 import { LaunchEvents } from './components/LaunchEvents';
 import { StreamingExplore } from './components/StreamingExplore';
 import { TokenSaleDetail } from './components/TokenSaleDetail';
+import { AIAnimation } from './components/AIAnimation';
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,8 @@ function AppInner() {
         <StreamingExplore />
       ) : currentPage === 'sale' ? (
         <TokenSaleDetail saleId={selectedSaleId} onNavigate={handleNavigate} />
+      ) : currentPage === 'create' ? (
+        <AIAnimation onNavigate={handleNavigate} />
       ) : null}
       <Footer />
     </div>

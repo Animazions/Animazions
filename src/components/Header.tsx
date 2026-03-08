@@ -23,7 +23,7 @@ export function Header({ onNavigate }: HeaderProps) {
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
-            <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
+            <button onClick={() => handleNavigate('create')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
               Create AI Animation
             </button>
             <button onClick={() => handleNavigate('launch')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer">
@@ -55,7 +55,7 @@ export function Header({ onNavigate }: HeaderProps) {
 
         {menuOpen && (
           <nav className="md:hidden flex flex-col gap-4 mt-6 pb-4">
-            <button onClick={() => handleNavigate('home')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
+            <button onClick={() => handleNavigate('create')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">
               Create AI Animation
             </button>
             <button onClick={() => handleNavigate('launch')} className="font-chakra text-sm uppercase tracking-wider hover:text-[#E70606] transition-colors cursor-pointer text-left">

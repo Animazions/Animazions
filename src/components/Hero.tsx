@@ -56,7 +56,10 @@ export function Hero({ onNavigate }: HeroProps) {
                   'Start Watching'
                 )}
               </button>
-              <button className="border border-white hover:bg-white hover:text-black px-8 py-4 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
+              <button
+                onClick={() => onNavigate('create')}
+                className="border border-white hover:bg-white hover:text-black px-8 py-4 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105"
+              >
                 Create AI Animation
               </button>
             </div>
