@@ -18,7 +18,7 @@ export function LaunchEvents({ onNavigate }: LaunchEventsProps) {
         <div className="max-w-[1440px] mx-auto">
           <div className="mb-12">
             <h1 className="font-krona text-4xl md:text-5xl lg:text-6xl mb-4">
-              Launch Events
+              Launch <span className="text-[#E70606]">Events</span>
             </h1>
             <p className="text-gray-400 font-jost text-lg max-w-2xl">
               Explore the hottest token launches and participate in active sales. Discover innovative projects backed by the community.
