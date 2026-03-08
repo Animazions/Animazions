@@ -6,7 +6,7 @@ const FEATURED_SERIES = [
   {
     id: '1',
     title: 'Stitch Head',
-    image: 'https://i.postimg.cc/sv64PXpX/Stitch-Head.jpg',
+    image: 'https://i.postimg.cc/sv64PXpX/Stitch-Head.jpg?size=xl',
     rating: 9.2,
     genre: 'Sci-Fi',
     episodes: 24,
@@ -15,7 +15,7 @@ const FEATURED_SERIES = [
   {
     id: '2',
     title: 'Super Mario Bros',
-    image: 'https://i.postimg.cc/mtXy3DQR/Mario-bros.jpg',
+    image: 'https://i.postimg.cc/mtXy3DQR/Mario-bros.jpg?size=xl',
     rating: 8.9,
     genre: 'Action',
     episodes: 12,
@@ -24,7 +24,7 @@ const FEATURED_SERIES = [
   {
     id: '3',
     title: 'Rise of the Guardians',
-    image: 'https://i.postimg.cc/LnC3kXz2/Rise-of-the-guardians.jpg',
+    image: 'https://i.postimg.cc/LnC3kXz2/Rise-of-the-guardians.jpg?size=xl',
     rating: 8.7,
     genre: 'Drama',
     episodes: 26,
@@ -33,7 +33,7 @@ const FEATURED_SERIES = [
   {
     id: '4',
     title: 'Your Name',
-    image: 'https://i.postimg.cc/w7fQ5vDC/Your-Name.jpg',
+    image: 'https://i.postimg.cc/w7fQ5vDC/Your-Name.jpg?size=xl',
     rating: 9.1,
     genre: 'Adventure',
     episodes: 13,
@@ -42,7 +42,7 @@ const FEATURED_SERIES = [
   {
     id: '5',
     title: 'Totoro',
-    image: 'https://i.postimg.cc/rKnNGmST/Totoro.jpg',
+    image: 'https://i.postimg.cc/rKnNGmST/Totoro.jpg?size=xl',
     rating: 8.4,
     genre: 'Mystery',
     episodes: 10,
@@ -51,7 +51,7 @@ const FEATURED_SERIES = [
   {
     id: '6',
     title: 'Akimato',
-    image: 'https://i.postimg.cc/bsC90JQq/Akimato.jpg',
+    image: 'https://i.postimg.cc/bsC90JQq/Akimato.jpg?size=xl',
     rating: 8.8,
     genre: 'Fantasy',
     episodes: 16,
