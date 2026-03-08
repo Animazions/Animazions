@@ -5,8 +5,8 @@ import { StreamingCard } from './StreamingCard';
 const FEATURED_SERIES = [
   {
     id: '1',
-    title: 'Echoes of Tomorrow',
-    image: 'https://images.pexels.com/photos/1440404/pexels-photo-1440404.jpeg?auto=compress&cs=tinysrgb&w=600',
+    title: 'Stitch Head',
+    image: 'https://postimg.cc/sv64PXpX',
     rating: 9.2,
     genre: 'Sci-Fi',
     episodes: 24,
@@ -14,8 +14,8 @@ const FEATURED_SERIES = [
   },
   {
     id: '2',
-    title: 'Neon City Chronicles',
-    image: 'https://images.pexels.com/photos/1407322/pexels-photo-1407322.jpeg?auto=compress&cs=tinysrgb&w=600',
+    title: 'Super Mario Bros',
+    image: 'https://postimg.cc/mtXy3DQR',
     rating: 8.9,
     genre: 'Action',
     episodes: 12,
@@ -23,8 +23,8 @@ const FEATURED_SERIES = [
   },
   {
     id: '3',
-    title: 'Dreams & Reality',
-    image: 'https://images.pexels.com/photos/3950375/pexels-photo-3950375.jpeg?auto=compress&cs=tinysrgb&w=600',
+    title: 'Rise of the Guardians',
+    image: 'https://postimg.cc/LnC3kXz2',
     rating: 8.7,
     genre: 'Drama',
     episodes: 26,
@@ -32,8 +32,8 @@ const FEATURED_SERIES = [
   },
   {
     id: '4',
-    title: 'Stellar Guardians',
-    image: 'https://images.pexels.com/photos/1476514/pexels-photo-1476514.jpeg?auto=compress&cs=tinysrgb&w=600',
+    title: 'Your Name',
+    image: 'https://postimg.cc/w7fQ5vDC',
     rating: 9.1,
     genre: 'Adventure',
     episodes: 13,
@@ -41,8 +41,8 @@ const FEATURED_SERIES = [
   },
   {
     id: '5',
-    title: 'Midnight Mysteries',
-    image: 'https://images.pexels.com/photos/1954496/pexels-photo-1954496.jpeg?auto=compress&cs=tinysrgb&w=600',
+    title: 'Totoro',
+    image: 'https://postimg.cc/rKnNGmST',
     rating: 8.4,
     genre: 'Mystery',
     episodes: 10,
@@ -50,8 +50,8 @@ const FEATURED_SERIES = [
   },
   {
     id: '6',
-    title: 'Beyond the Veil',
-    image: 'https://images.pexels.com/photos/2869499/pexels-photo-2869499.jpeg?auto=compress&cs=tinysrgb&w=600',
+    title: 'Akimato',
+    image: 'https://postimg.cc/bsC90JQq',
     rating: 8.8,
     genre: 'Fantasy',
     episodes: 16,
