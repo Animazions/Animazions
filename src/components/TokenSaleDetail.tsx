@@ -23,12 +23,22 @@ export function TokenSaleDetail({ saleId = 1, onNavigate }: TokenSaleDetailProps
     }
   };
 
-  const roadmap = [
-    { phase: 'Phase 1', title: 'Produce Series one', status: 'Planned', date: 'Q1 2026' },
-    { phase: 'Phase 2', title: 'Release Series one', status: 'Planned', date: 'Q1/Q2 2026' },
-    { phase: 'Phase 3', title: 'Produce Series 2 and release merchandizing', status: 'Planned', date: 'Q2 2026' },
-    { phase: 'Phase 4', title: 'Release Series 2 and start production on the first movie', status: 'Planned', date: 'Q3/Q4 2026' },
-  ];
+  const roadmap = useMemo(() => {
+    if (saleId === 2) {
+      return [
+        { phase: 'Phase 1', title: 'Produce Movie', status: 'Planned', date: 'Q1 2026' },
+        { phase: 'Phase 2', title: 'Release Movie', status: 'Planned', date: 'Q1/Q2 2026' },
+        { phase: 'Phase 3', title: 'Release merchandizing and NFT collection', status: 'Planned', date: 'Q2 2026' },
+        { phase: 'Phase 4', title: 'Produce the second movie', status: 'Planned', date: 'Q3/Q4 2026' },
+      ];
+    }
+    return [
+      { phase: 'Phase 1', title: 'Produce Series one', status: 'Planned', date: 'Q1 2026' },
+      { phase: 'Phase 2', title: 'Release Series one', status: 'Planned', date: 'Q1/Q2 2026' },
+      { phase: 'Phase 3', title: 'Produce Series 2 and release merchandizing', status: 'Planned', date: 'Q2 2026' },
+      { phase: 'Phase 4', title: 'Release Series 2 and start production on the first movie', status: 'Planned', date: 'Q3/Q4 2026' },
+    ];
+  }, [saleId]);
 
   const team = [
     { name: 'Alex Chen', role: 'Founder & CEO', image: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200' },
