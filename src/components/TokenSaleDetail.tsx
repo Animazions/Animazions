@@ -19,15 +19,15 @@ export function TokenSaleDetail({ saleId = 1, onNavigate }: TokenSaleDetailProps
 
   const handleBuy = () => {
     if (amount && parseFloat(amount) > 0) {
-      console.log(`Purchasing ${amount} NBL tokens`);
+      console.log(`Purchasing ${amount} ${sale.symbol} tokens`);
     }
   };
 
   const roadmap = [
-    { phase: 'Phase 1', title: 'Platform Launch', status: 'Completed', date: 'Q1 2025' },
-    { phase: 'Phase 2', title: 'AI Integration', status: 'In Progress', date: 'Q2 2025' },
-    { phase: 'Phase 3', title: 'Exchange Listings', status: 'Planned', date: 'Q3 2025' },
-    { phase: 'Phase 4', title: 'Global Expansion', status: 'Planned', date: 'Q4 2025' },
+    { phase: 'Phase 1', title: 'Produce Series one', status: 'Planned', date: 'Q1 2026' },
+    { phase: 'Phase 2', title: 'Release Series one', status: 'Planned', date: 'Q1/Q2 2026' },
+    { phase: 'Phase 3', title: 'Produce Series 2 and release merchandizing', status: 'Planned', date: 'Q2 2026' },
+    { phase: 'Phase 4', title: 'Release Series 2 and start production on the first movie', status: 'Planned', date: 'Q3/Q4 2026' },
   ];
 
   const team = [
@@ -69,7 +69,7 @@ export function TokenSaleDetail({ saleId = 1, onNavigate }: TokenSaleDetailProps
                 </div>
                 <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
                   <p className="text-gray-400 text-sm mb-2 font-chakra uppercase">Min/Max Buy</p>
-                  <p className="text-2xl font-bold">{sale.minBuy} - {sale.maxBuy} NBL</p>
+                  <p className="text-2xl font-bold">{sale.minBuy} - {sale.maxBuy} {sale.symbol}</p>
                 </div>
                 <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
                   <p className="text-gray-400 text-sm mb-2 font-chakra uppercase">Time Left</p>
@@ -245,7 +245,7 @@ export function TokenSaleDetail({ saleId = 1, onNavigate }: TokenSaleDetailProps
                 </div>
 
                 <div className="mb-6">
-                  <label className="block text-sm font-chakra uppercase mb-3 text-gray-300">Amount (NBL)</label>
+                  <label className="block text-sm font-chakra uppercase mb-3 text-gray-300">Amount ({sale.symbol})</label>
                   <input
                     type="number"
                     value={amount}

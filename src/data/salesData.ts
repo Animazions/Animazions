@@ -1,12 +1,12 @@
 export const salesData = [
   {
     id: 1,
-    name: 'Nebula Protocol',
-    symbol: 'NBL',
-    description: 'Nebula Protocol is a next-generation DeFi platform that leverages AI-powered trading strategies and decentralized liquidity management.',
-    longDescription: 'Nebula Protocol represents a paradigm shift in decentralized finance. By combining advanced machine learning algorithms with blockchain technology, we\'re building a platform that offers unparalleled trading efficiency and capital optimization. Our mission is to democratize access to institutional-grade trading tools for all participants.',
-    image: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=600',
-    category: 'DeFi',
+    name: 'Frens Of The Galaxy: A Galactic Awakening',
+    symbol: 'FRENS',
+    description: 'Frens Of The Galaxy: A Galactic Awakening is an exhilarating blend of action, humor, and social commentary, exploring themes of identity, community, and the power of laughter in the face of adversity.',
+    longDescription: 'In a fantastical galaxy where crypto meme characters come to life, a band of unlikely heroes rises to challenge the oppressive governments that seek to control their destinies. Led by the clever and charismatic Pepe, the loyal and optimistic Doge, the fierce and determined Shiba, the resourceful strategist Brett, and the adventurous spirit Floki, this diverse group of rebels embarks on a daring quest for freedom.\n\nEach planet in this vibrant universe is a unique realm, reflecting the personalities and cultures of its meme inhabitants. From the bustling markets of Doge\'s home world to the mystical forests of Floki\'s realm, the rebels must navigate treacherous landscapes and face formidable foes, including the ruthless government Enforcers and their tyrannical leaders.\n\nAs the war against suppression escalates, the rebels discover that their powers are not just rooted in belief but also in the strength of their bonds and the shared hunger for freedom. With each battle, they inspire others to join their cause, igniting a galaxy-wide movement against censorship and control.\n\nWill Pepe, Doge, Shiba, Brett, and Floki succeed in their quest to overthrow their oppressors and restore freedom to the galaxy, or will they be silenced by the forces that seek to suppress them? Join the adventure and witness the rise of the Frens Of The Galaxy in this epic fantasy saga!',
+    image: '/Production_drawn_characters..jpg',
+    category: 'TV Series',
     status: 'Active',
     progress: 75,
     raised: 125000,
