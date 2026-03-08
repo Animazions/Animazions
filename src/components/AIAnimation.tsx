@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen, Play } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen, Play, Pause } from 'lucide-react';
 
 interface AIAnimationProps {
   onNavigate: (page: string) => void;
@@ -16,7 +16,41 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   const [generatedVideos, setGeneratedVideos] = useState<string[]>([]);
   const [videoSequence, setVideoSequence] = useState<string[]>([]);
   const [playingVideos, setPlayingVideos] = useState<boolean[]>([false, false, false, false]);
+  const [hoveredVideo, setHoveredVideo] = useState<number | null>(null);
+  const [videoPosters, setVideoPosters] = useState<(string | null)[]>([null, null, null, null]);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  const captureFrame = useCallback((index: number) => {
+    const video = videoRefs.current[index];
+    if (!video) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 360;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    setVideoPosters(prev => { const n = [...prev]; n[index] = dataUrl; return n; });
+  }, []);
+
+  useEffect(() => {
+    [0, 1, 2, 3].forEach((index) => {
+      const video = videoRefs.current[index];
+      if (!video) return;
+      const onLoaded = () => {
+        video.currentTime = 0.5;
+      };
+      const onSeeked = () => {
+        captureFrame(index);
+      };
+      video.addEventListener('loadeddata', onLoaded);
+      video.addEventListener('seeked', onSeeked);
+      return () => {
+        video.removeEventListener('loadeddata', onLoaded);
+        video.removeEventListener('seeked', onSeeked);
+      };
+    });
+  }, [captureFrame]);
 
   const imageModels = [
     'DALL-E 3',
@@ -87,10 +121,10 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   ];
 
   const communityVideos = [
-    { src: '/vid1.mp4', poster: '/still_18.jpg' },
-    { src: '/vid2.mp4', poster: '/still27.jpg' },
-    { src: '/vid3.mp4', poster: '/still29.jpg' },
-    { src: '/vid4.mp4', poster: '/naruto.jpg' }
+    { src: '/vid1.mp4' },
+    { src: '/vid2.mp4' },
+    { src: '/vid3.mp4' },
+    { src: '/vid4.mp4' }
   ];
 
   return (
@@ -464,29 +498,41 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
             {communityVideos.map((video, index) => (
               <div
                 key={index}
-                className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group hover:border-[#E70606] transition-all"
+                className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden hover:border-[#E70606] transition-all"
+                onMouseEnter={() => setHoveredVideo(index)}
+                onMouseLeave={() => setHoveredVideo(null)}
               >
                 <video
                   ref={(el) => (videoRefs.current[index] = el)}
                   src={video.src}
-                  poster={video.poster}
+                  poster={videoPosters[index] ?? undefined}
                   className="w-full h-full object-cover"
+                  preload="metadata"
                   onEnded={() => setPlayingVideos(prev => { const n = [...prev]; n[index] = false; return n; })}
                   onPause={() => setPlayingVideos(prev => { const n = [...prev]; n[index] = false; return n; })}
                   onPlay={() => setPlayingVideos(prev => { const n = [...prev]; n[index] = true; return n; })}
                 />
+
+                {/* Play button — shown when not playing */}
                 {!playingVideos[index] && (
                   <button
-                    onClick={() => {
-                      const vid = videoRefs.current[index];
-                      if (vid) {
-                        vid.play();
-                      }
-                    }}
+                    onClick={() => videoRefs.current[index]?.play()}
                     className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-all"
                   >
                     <div className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
                       <Play className="w-8 h-8 fill-white text-white ml-1" />
+                    </div>
+                  </button>
+                )}
+
+                {/* Pause button — shown only on hover while playing */}
+                {playingVideos[index] && hoveredVideo === index && (
+                  <button
+                    onClick={() => videoRefs.current[index]?.pause()}
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 transition-all"
+                  >
+                    <div className="w-14 h-14 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 hover:scale-110 transition-all shadow-lg backdrop-blur-sm">
+                      <Pause className="w-7 h-7 fill-white text-white" />
                     </div>
                   </button>
                 )}
