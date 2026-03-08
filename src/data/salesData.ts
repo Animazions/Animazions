@@ -32,7 +32,7 @@ export const salesData = [
     symbol: 'NBL',
     description: 'Nebula: War of the worlds is an epic fantasy adventure exploring themes of warfare, magic, and the clash between two worlds.',
     longDescription: 'When the world of the Orcs of Draenor is being destroyed by the evil fel magic that uses life-force, the powerful warlock Gul\'dan creates a portal to the world of Azeroth and forms the Horde with members of the Orc clans. He also captures many prisoners to keep the portal open. The king of Azeroth, Llane Wrynn and his brother-in-law, Anduin Lothar are informed by the apprentice of magician Khadgar that he has found fel magic in dead bodies and the king decides to summon the Guardian of Tirisfal, Medivh, to protect his kingdom. Lothar and Khadgar head to Kharazhan to meet Medivh and an ominous shadow points a book out to Khadgar, who takes it and hides. Anduin, Khadgar and Medivh and a group of soldiers are attacked by Orcs and they capture the slave Garona, who is released by King Llane, and she shows them the location of the portal. Garona is contacted by the Orc chief of a clan Durotan that wants to meet King Llane to stop the fel magic. Meanwhile Khadgar learns that the gate was opened with the help of someone in Azeroth. Shall King Llane trust Garona and Durotan, who might be the traitor?',
-    image: 'https://images.pexels.com/photos/1939485/pexels-photo-1939485.jpeg?auto=compress&cs=tinysrgb&w=600',
+    image: 'https://i.postimg.cc/Pqk5Mvsx/poster1.webp',
     category: 'Movie',
     status: 'Active',
     progress: 92,
