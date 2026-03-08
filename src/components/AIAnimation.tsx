@@ -452,7 +452,7 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
         <section className="mb-16">
           <h2 className="font-krona text-2xl mb-6">COMMUNITY CREATED VIDEOS</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((index) => (
+            {[1, 2, 3, 4].map((index) => (
               <div
                 key={index}
                 className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group cursor-pointer hover:border-[#E70606] transition-all"
