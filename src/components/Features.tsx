@@ -73,7 +73,7 @@ export function Features() {
             READY TO START YOUR JOURNEY?
           </h3>
           <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto font-jost">
-            Join thousands of creators and collectors in the world's first Web 3.0 animation platform
+            Join thousands of creators and animation enthusiasts in the world's first Web 3.0 animation platform
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <button className="bg-white text-black hover:bg-gray-100 px-8 py-4 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
