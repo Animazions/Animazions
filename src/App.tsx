@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ThirdwebProvider,
   metamaskWallet,
@@ -21,8 +20,6 @@ import { TokenSaleDetail } from './components/TokenSaleDetail';
 import { AIAnimation } from './components/AIAnimation';
 import { MyProjects } from './components/MyProjects';
 import { AuthProvider } from './contexts/AuthContext';
-
-const queryClient = new QueryClient();
 
 const supportedWallets = [
   metamaskWallet(),
@@ -83,20 +80,18 @@ function AppInner() {
 function App() {
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThirdwebProvider
-          supportedChains={supportedChains}
-          supportedWallets={supportedWallets}
-          dAppMeta={{
-            name: 'Animazions',
-            description: 'AI Animation Platform',
-            logoUrl: 'https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png',
-            url: typeof window !== 'undefined' ? window.location.origin : '',
-          }}
-        >
-          <AppInner />
-        </ThirdwebProvider>
-      </QueryClientProvider>
+      <ThirdwebProvider
+        supportedChains={supportedChains}
+        supportedWallets={supportedWallets}
+        dAppMeta={{
+          name: 'Animazions',
+          description: 'AI Animation Platform',
+          logoUrl: 'https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png',
+          url: typeof window !== 'undefined' ? window.location.origin : '',
+        }}
+      >
+        <AppInner />
+      </ThirdwebProvider>
     </AuthProvider>
   );
 }
