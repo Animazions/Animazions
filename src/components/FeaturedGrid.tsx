@@ -33,22 +33,6 @@ const featuredItems = [
     rating: 4.6,
     image: 'https://i.postimg.cc/Yqq3tM8D/Stranger-things-AI-Finale.jpg',
   },
-  {
-    id: 5,
-    title: 'Sazuka: AI Anime Fight',
-    genre: 'Adventure',
-    duration: '18:55',
-    rating: 4.9,
-    image: 'https://i.postimg.cc/s27p5dS5/animefight.png',
-  },
-  {
-    id: 6,
-    title: 'Crystal Kingdom',
-    genre: 'Fantasy',
-    duration: '14:25',
-    rating: 4.7,
-    image: 'https://static0.moviewebimages.com/wordpress/wp-content/uploads/2023/08/the-most-visually-stunning-anime-ranked.jpg',
-  },
 ];
 
 export function FeaturedGrid() {
