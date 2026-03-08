@@ -82,13 +82,22 @@ function AppInner() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ThirdwebProvider supportedChains={supportedChains} supportedWallets={supportedWallets}>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThirdwebProvider
+          supportedChains={supportedChains}
+          supportedWallets={supportedWallets}
+          dAppMeta={{
+            name: 'Animazions',
+            description: 'AI Animation Platform',
+            logoUrl: 'https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png',
+            url: typeof window !== 'undefined' ? window.location.origin : '',
+          }}
+        >
           <AppInner />
         </ThirdwebProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }
 
