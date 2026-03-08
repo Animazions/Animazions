@@ -1,11 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen, Play, Pause } from 'lucide-react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen, Play, Pause, Save, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface AIAnimationProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, projectId?: string) => void;
+  projectId?: string;
 }
 
-export function AIAnimation({ onNavigate }: AIAnimationProps) {
+export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
+  const { user } = useAuth();
   const [selectedImageModel, setSelectedImageModel] = useState('');
   const [selectedVideoModel, setSelectedVideoModel] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
@@ -18,7 +22,99 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
   const [playingVideos, setPlayingVideos] = useState<boolean[]>([false, false, false, false]);
   const [hoveredVideo, setHoveredVideo] = useState<number | null>(null);
   const [videoPosters, setVideoPosters] = useState<(string | null)[]>([null, null, null, null]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [lastSaved, setLastSaved] = useState<string>('');
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const saveProject = useCallback(async () => {
+    if (!user || !projectId) return;
+
+    setSaving(true);
+    setSaveError('');
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          state: {
+            selectedImageModel,
+            selectedVideoModel,
+            imagePrompt,
+            videoPrompt,
+            clipDuration,
+            storyboardImages,
+            moodboardImages,
+            generatedVideos,
+            videoSequence,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', projectId);
+
+      if (error) throw error;
+
+      setLastSaved(new Date().toLocaleTimeString());
+    } catch (err) {
+      setSaveError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }, [user, projectId, selectedImageModel, selectedVideoModel, imagePrompt, videoPrompt, clipDuration, storyboardImages, moodboardImages, generatedVideos, videoSequence]);
+
+  const loadProject = useCallback(async () => {
+    if (!user || !projectId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('state')
+        .eq('id', projectId)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.state) {
+        const state = data.state;
+        setSelectedImageModel(state.selectedImageModel || '');
+        setSelectedVideoModel(state.selectedVideoModel || '');
+        setImagePrompt(state.imagePrompt || '');
+        setVideoPrompt(state.videoPrompt || '');
+        setClipDuration(state.clipDuration || 5);
+        setStoryboardImages(state.storyboardImages || []);
+        setMoodboardImages(state.moodboardImages || []);
+        setGeneratedVideos(state.generatedVideos || []);
+        setVideoSequence(state.videoSequence || []);
+      }
+    } catch (err) {
+      setSaveError((err as Error).message);
+    }
+  }, [user, projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      loadProject();
+    }
+  }, [projectId, loadProject]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      saveProject();
+    }, 2000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [projectId, saveProject]);
 
   const captureFrame = useCallback((index: number) => {
     const video = videoRefs.current[index];
@@ -133,24 +229,58 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
 
         {/* Left Sidebar */}
         <div className="hidden lg:flex flex-col w-64 gap-4 pt-8">
-          <div className="space-y-3">
-            <button className="w-full bg-[#E70606] hover:bg-[#c00505] px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2">
-              <LogIn className="w-4 h-4" />
-              Login
-            </button>
-            <button className="w-full border border-gray-700 hover:border-[#E70606] hover:text-[#E70606] px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
-              Sign Up
-            </button>
-          </div>
+          {user ? (
+            <>
+              <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                <p className="text-xs text-gray-400 mb-1">Logged in as</p>
+                <p className="text-sm font-semibold truncate">{user.email}</p>
+              </div>
+              <div className="space-y-3">
+                <button
+                  onClick={() => onNavigate('projects')}
+                  className="w-full bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2 border border-gray-700 hover:border-[#E70606]"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                  My Projects
+                </button>
+              </div>
+              {saveError && (
+                <div className="p-3 bg-red-900/20 border border-red-500 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-300 text-xs">{saveError}</p>
+                </div>
+              )}
+              {projectId && (
+                <div className="p-3 bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-400">
+                  {saving ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-[#E70606] rounded-full animate-pulse"></div>
+                      Saving...
+                    </div>
+                  ) : lastSaved ? (
+                    <>Last saved {lastSaved}</>
+                  ) : (
+                    'Auto-saving enabled'
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <button
+                  onClick={() => onNavigate('home')}
+                  className="w-full bg-[#E70606] hover:bg-[#c00505] px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 text-center">Login to save your projects</p>
+            </>
+          )}
 
           <div className="border-t border-gray-800 pt-4">
-            <button className="w-full bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2 border border-gray-700 hover:border-[#E70606]">
-              <FolderOpen className="w-4 h-4" />
-              My Projects
-            </button>
-          </div>
-
-          <div>
             <button className="w-full bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2 border border-gray-700 hover:border-[#E70606]">
               <CreditCard className="w-4 h-4" />
               Subscriptions

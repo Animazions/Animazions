@@ -19,6 +19,8 @@ import { LaunchEvents } from './components/LaunchEvents';
 import { StreamingExplore } from './components/StreamingExplore';
 import { TokenSaleDetail } from './components/TokenSaleDetail';
 import { AIAnimation } from './components/AIAnimation';
+import { MyProjects } from './components/MyProjects';
+import { AuthProvider } from './contexts/AuthContext';
 
 const queryClient = new QueryClient();
 
@@ -42,11 +44,14 @@ const supportedChains = [
 function AppInner() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedSaleId, setSelectedSaleId] = useState<number | undefined>(undefined);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
 
-  const handleNavigate = (page: string, saleId?: number) => {
+  const handleNavigate = (page: string, id?: number | string) => {
     setCurrentPage(page);
-    if (saleId) {
-      setSelectedSaleId(saleId);
+    if (page === 'sale' && typeof id === 'number') {
+      setSelectedSaleId(id);
+    } else if (page === 'create' && typeof id === 'string') {
+      setSelectedProjectId(id);
     }
   };
 
@@ -66,7 +71,9 @@ function AppInner() {
       ) : currentPage === 'sale' ? (
         <TokenSaleDetail saleId={selectedSaleId} onNavigate={handleNavigate} />
       ) : currentPage === 'create' ? (
-        <AIAnimation onNavigate={handleNavigate} />
+        <AIAnimation onNavigate={handleNavigate} projectId={selectedProjectId} />
+      ) : currentPage === 'projects' ? (
+        <MyProjects onNavigate={handleNavigate} />
       ) : null}
       <Footer />
     </div>
@@ -76,9 +83,11 @@ function AppInner() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThirdwebProvider supportedChains={supportedChains} supportedWallets={supportedWallets}>
-        <AppInner />
-      </ThirdwebProvider>
+      <AuthProvider>
+        <ThirdwebProvider supportedChains={supportedChains} supportedWallets={supportedWallets}>
+          <AppInner />
+        </ThirdwebProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
