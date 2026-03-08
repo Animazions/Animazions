@@ -452,23 +452,18 @@ export function AIAnimation({ onNavigate }: AIAnimationProps) {
         <section className="mb-16">
           <h2 className="font-krona text-2xl mb-6">COMMUNITY CREATED VIDEOS</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4].map((index) => (
+            {['/video1.mp4', '/video2.mp4', '/video3.mp4', '/video4.mp4'].map((videoSrc, index) => (
               <div
                 key={index}
                 className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group cursor-pointer hover:border-[#E70606] transition-all"
               >
-                <img
-                  src={`https://images.pexels.com/photos/${3945683 + index * 1000}/pexels-photo-${3945683 + index * 1000}.jpeg?auto=compress&cs=tinysrgb&w=800`}
-                  alt={`Community Video ${index}`}
+                <video
+                  src={videoSrc}
                   className="w-full h-full object-cover"
+                  controls
                 />
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-[#E70606] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Film className="w-8 h-8" />
-                  </div>
-                </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                  <p className="font-chakra text-sm uppercase">AI Animation {index}</p>
+                  <p className="font-chakra text-sm uppercase">AI Animation {index + 1}</p>
                   <p className="text-xs text-gray-400 font-jost">Created by Community</p>
                 </div>
               </div>
