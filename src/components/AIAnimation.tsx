@@ -626,15 +626,24 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             <div className="mt-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-chakra text-sm uppercase tracking-wider text-gray-400">Generated Image</p>
-                <button
-                  onClick={() => {
-                    setStoryboardImages(prev => [...prev, generatedImage].slice(0, getStoryboardSlots()));
-                    setMoodboardImages(prev => [...prev, generatedImage]);
-                  }}
-                  className="text-xs font-chakra uppercase tracking-wider text-[#E70606] hover:text-red-400 transition border border-[#E70606] hover:border-red-400 px-3 py-1.5 rounded-lg"
-                >
-                  + Add to Storyboard & Moodboard
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setStoryboardImages(prev => [...prev, generatedImage].slice(0, getStoryboardSlots()));
+                    }}
+                    className="text-xs font-chakra uppercase tracking-wider text-[#E70606] hover:text-red-400 transition border border-[#E70606] hover:border-red-400 px-3 py-1.5 rounded-lg"
+                  >
+                    + Add to Storyboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMoodboardImages(prev => [...prev, generatedImage]);
+                    }}
+                    className="text-xs font-chakra uppercase tracking-wider text-[#E70606] hover:text-red-400 transition border border-[#E70606] hover:border-red-400 px-3 py-1.5 rounded-lg"
+                  >
+                    + Add to Mood Board
+                  </button>
+                </div>
               </div>
               <div className="relative rounded-xl overflow-hidden border border-gray-700 max-w-lg">
                 <img
