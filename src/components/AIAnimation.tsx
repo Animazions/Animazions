@@ -784,14 +784,14 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
             <div>
               <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400 mb-2">
-                Upload Image
+                Upload Image If You Don't Want to Use AI
               </label>
               <button
                 onClick={() => handleImageUpload('storyboard')}
                 className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost hover:border-[#E70606] transition-colors flex items-center justify-center gap-2"
               >
                 <Upload className="w-5 h-5" />
-                Upload Your Image
+                Upload Image
               </button>
             </div>
           </div>
@@ -808,6 +808,20 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             />
           </div>
 
+          {selectedImageModel && !imageModels.find(m => m.name === selectedImageModel)?.free && (
+            <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-blue-300 text-sm font-jost">This is a paid model. You'll need a subscription to use it.</p>
+            </div>
+          )}
+
+          {selectedImageModel && imageModels.find(m => m.name === selectedImageModel)?.free && (
+            <div className="mt-4 bg-yellow-900/30 border border-yellow-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+              <p className="text-yellow-300 text-sm font-jost">Free models have a higher failure rate. If generation fails, please try again.</p>
+            </div>
+          )}
+
           {imageGenError && (
             <div className="mt-4 bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -815,23 +829,26 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </div>
           )}
 
-          <button
-            onClick={handleGenerateImage}
-            disabled={generatingImage}
-            className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
-          >
-            {generatingImage ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Generate Image
-              </>
-            )}
-          </button>
+          <div className="flex items-start gap-4">
+            <button
+              onClick={handleGenerateImage}
+              disabled={generatingImage}
+              className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+            >
+              {generatingImage ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate Image
+                </>
+              )}
+            </button>
+            <p className="mt-6 text-xs font-jost text-gray-400">All uploaded images are saved in the storyboard below</p>
+          </div>
 
           {generatedImage && (
             <div className="mt-6">
@@ -878,7 +895,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
           <div className="mb-6">
             <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400 mb-3">
-              Select Clip Duration
+              Select Number of Panels
             </label>
             <div className="flex gap-4">
               {[5, 15, 30].map((duration) => (
@@ -891,14 +908,21 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                       : 'bg-black border-gray-700 hover:border-[#E70606]'
                   }`}
                 >
-                  {duration}s ({duration === 5 ? '3' : duration === 15 ? '5' : '9'} images)
+                  {duration === 5 ? '3 Panels' : duration === 15 ? '5 Panels' : '9 Panels'}
                 </button>
               ))}
+              <input
+                type="number"
+                min="1"
+                max="20"
+                placeholder="Custom"
+                className="px-4 py-2 rounded-lg font-chakra text-sm bg-black border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition-colors w-24"
+              />
             </div>
           </div>
 
           <p className="text-gray-400 font-jost mb-4 text-sm">
-            Add {getStoryboardSlots()} images to create your {clipDuration}-second animation. Generated images from above can be added here.
+            It is recommended to have roughly 3 images per 5 second video generated but each AI model operates differently so please feel free to experiment. Generated images from above can be added here.
           </p>
 
           <div className={`grid gap-4 mb-4 ${
@@ -1017,6 +1041,12 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                   ))}
                 </optgroup>
               </select>
+              {selectedVideoModel && videoModels.find(m => m.name === selectedVideoModel)?.free && (
+                <div className="mt-3 bg-yellow-900/30 border border-yellow-700 rounded-lg p-3 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+                  <p className="text-yellow-300 text-sm font-jost">Free models have a higher failure rate. If generation fails, please try again.</p>
+                </div>
+              )}
             </div>
           </div>
 
