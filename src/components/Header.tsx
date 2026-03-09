@@ -1,7 +1,24 @@
 import { Menu, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
-import { ConnectWallet } from '@thirdweb-dev/react';
+import { ConnectWallet, useAddress } from '@thirdweb-dev/react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAvaxBalance } from '../hooks/useAvaxBalance';
+
+function WalletBalanceBadge() {
+  const address = useAddress();
+  const { balance, loading } = useAvaxBalance();
+
+  if (!address) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+      <span className="font-chakra text-xs text-gray-300 uppercase tracking-wider">
+        {loading ? '...' : balance !== null ? `${balance} AVAX` : '0 AVAX'}
+      </span>
+    </div>
+  );
+}
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -46,6 +63,7 @@ export function Header({ onNavigate }: HeaderProps) {
                 My Projects
               </button>
             )}
+            <WalletBalanceBadge />
             <ConnectWallet
               theme="dark"
               btnTitle="Connect Wallet"
@@ -97,6 +115,7 @@ export function Header({ onNavigate }: HeaderProps) {
                 My Projects
               </button>
             )}
+            <WalletBalanceBadge />
             <ConnectWallet
               theme="dark"
               btnTitle="Connect Wallet"

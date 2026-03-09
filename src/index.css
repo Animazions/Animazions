@@ -13,21 +13,40 @@
   }
 }
 
-/* Thirdweb ConnectWallet: ensure balance text is visible */
-[data-rk] button[data-testid="connect-wallet-button"],
-[class*="tw-connected-wallet"] {
+/* Thirdweb ConnectWallet: fix balance display */
+[class*="tw-"] button,
+[class*="tw-"] [role="button"],
+div[class*="ConnectWallet"] button,
+button[class*="ConnectWallet"] {
+  height: auto !important;
+  min-height: unset !important;
+  overflow: visible !important;
+}
+
+/* target the inner wrapper that holds address + balance lines */
+[class*="tw-"] [class*="balance"],
+[class*="tw-"] [class*="Balance"],
+[class*="tw-"] [class*="address"],
+[class*="tw-"] [class*="Address"] {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  overflow: visible !important;
+  max-height: none !important;
+  clip: unset !important;
+  clip-path: none !important;
+}
+
+/* Thirdweb v4 renders connected button with data-tw-btn attribute */
+[data-tw-btn] {
   height: auto !important;
   min-height: unset !important;
 }
 
-[class*="tw-connected-wallet__address"],
-[class*="tw-connected-wallet__balance"] {
-  display: block !important;
-  overflow: visible !important;
-  white-space: nowrap !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  color: inherit !important;
+/* Nuclear option: any button inside a thirdweb root container */
+#tw-provider button,
+#thirdweb-provider button {
+  height: auto !important;
 }
 
 @layer utilities {
