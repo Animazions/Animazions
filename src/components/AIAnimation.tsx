@@ -37,6 +37,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageGenError, setImageGenError] = useState<string>('');
+  const [generatingVideo, setGeneratingVideo] = useState(false);
+  const [videoGenError, setVideoGenError] = useState<string>('');
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -176,16 +178,17 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   ];
 
   const videoModels = [
-    'Runway Gen-3',
-    'Pika Labs',
-    'Stable Video Diffusion',
-    'Synthesia',
-    'Kaiber AI',
-    'Neural Frames',
-    'Domo AI',
-    'Moonvalley',
-    'Genmo',
-    'AnimateDiff'
+    { name: 'Pollinations Video (FREE)', free: true },
+    { name: 'Runway Gen-3', free: false },
+    { name: 'Pika Labs', free: false },
+    { name: 'Stable Video Diffusion', free: false },
+    { name: 'Synthesia', free: false },
+    { name: 'Kaiber AI', free: false },
+    { name: 'Neural Frames', free: false },
+    { name: 'Domo AI', free: false },
+    { name: 'Moonvalley', free: false },
+    { name: 'Genmo', free: false },
+    { name: 'AnimateDiff', free: false }
   ];
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -291,6 +294,59 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       setImageGenError(err?.message || 'Image generation failed. Please try again.');
     } finally {
       setGeneratingImage(false);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!videoPrompt.trim()) {
+      setVideoGenError('Please enter a video description first.');
+      return;
+    }
+    if (!selectedVideoModel) {
+      setVideoGenError('Please select an AI video model first.');
+      return;
+    }
+    const model = videoModels.find(m => m.name === selectedVideoModel);
+    if (!model?.free) {
+      setVideoGenError(`${selectedVideoModel} requires a paid subscription. Please select a free model.`);
+      return;
+    }
+    if (storyboardImages.length === 0) {
+      setVideoGenError('Please add at least one image to your storyboard before generating a video.');
+      return;
+    }
+
+    setGeneratingVideo(true);
+    setVideoGenError('');
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const prompt = `${videoPrompt}\n\nReference images context: Using ${storyboardImages.length} storyboard image(s) for visual consistency.`;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-video`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Apikey': supabaseKey,
+        },
+        body: JSON.stringify({
+          prompt,
+          model: selectedVideoModel,
+          storyboardImages: storyboardImages.slice(0, 3),
+          moodboardImages: moodboardImages.slice(0, 2),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Video generation failed');
+      setGeneratedVideos(prev => [...prev, data.videoUrl]);
+    } catch (err: any) {
+      setVideoGenError(err?.message || 'Video generation failed. Please try again.');
+    } finally {
+      setGeneratingVideo(false);
     }
   };
 
@@ -795,9 +851,16 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white focus:outline-none focus:border-[#E70606] transition-colors"
               >
                 <option value="">Select an AI video generator</option>
-                {videoModels.map(model => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
+                <optgroup label="-- FREE --">
+                  {videoModels.filter(m => m.free).map(model => (
+                    <option key={model.name} value={model.name}>{model.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="-- Paid / Subscription Required --">
+                  {videoModels.filter(m => !m.free).map(model => (
+                    <option key={model.name} value={model.name}>{model.name}</option>
+                  ))}
+                </optgroup>
               </select>
             </div>
           </div>
@@ -814,9 +877,29 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             />
           </div>
 
-          <button className="bg-[#E70606] hover:bg-[#c00505] px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            Generate Video
+          {videoGenError && (
+            <div className="mb-4 bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-300 text-sm font-jost">{videoGenError}</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleGenerateVideo}
+            disabled={generatingVideo}
+            className="bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+          >
+            {generatingVideo ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Generating Video...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Generate Video
+              </>
+            )}
           </button>
         </section>
 
