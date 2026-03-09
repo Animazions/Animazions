@@ -1,10 +1,9 @@
-import { X, Loader } from 'lucide-react';
+import { X, Loader, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import {
   useConnect,
   metamaskWallet,
   coinbaseWallet,
-  walletConnect,
   trustWallet,
   rainbowWallet,
   phantomWallet,
@@ -16,13 +15,21 @@ interface WalletModalProps {
   onConnect: () => void;
 }
 
+const isMetaMaskInstalled = typeof window !== 'undefined' && Boolean(window.ethereum?.isMetaMask);
+
 const walletConfigs = [
-  { config: metamaskWallet(), name: 'MetaMask', description: 'Browser extension & mobile', icon: '🦊' },
-  { config: coinbaseWallet(), name: 'Coinbase Wallet', description: 'Connect with Coinbase', icon: '💎' },
-  { config: walletConnect(), name: 'WalletConnect', description: 'Scan QR to connect', icon: '🔗' },
-  { config: trustWallet(), name: 'Trust Wallet', description: 'Mobile crypto wallet', icon: '🛡️' },
-  { config: rainbowWallet(), name: 'Rainbow', description: 'A fun, simple wallet', icon: '🌈' },
-  { config: phantomWallet(), name: 'Phantom', description: 'Solana & EVM wallet', icon: '👻' },
+  {
+    config: metamaskWallet(),
+    name: 'MetaMask',
+    description: isMetaMaskInstalled ? 'Browser extension & mobile' : 'Extension not detected — install first',
+    icon: '🦊',
+    disabled: !isMetaMaskInstalled,
+    installUrl: 'https://metamask.io/download/',
+  },
+  { config: coinbaseWallet(), name: 'Coinbase Wallet', description: 'Connect with Coinbase', icon: '💎', disabled: false },
+  { config: trustWallet(), name: 'Trust Wallet', description: 'Mobile crypto wallet', icon: '🛡️', disabled: false },
+  { config: rainbowWallet(), name: 'Rainbow', description: 'A fun, simple wallet', icon: '🌈', disabled: false },
+  { config: phantomWallet(), name: 'Phantom', description: 'Solana & EVM wallet', icon: '👻', disabled: false },
 ];
 
 export function WalletModal({ isOpen, onClose, onConnect }: WalletModalProps) {
@@ -69,33 +76,51 @@ export function WalletModal({ isOpen, onClose, onConnect }: WalletModalProps) {
           </p>
 
           {error && (
-            <div className="bg-red-900/30 border border-red-700 rounded-lg p-3">
+            <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <p className="text-red-300 text-sm font-jost">{error}</p>
             </div>
           )}
 
-          {walletConfigs.map(({ config, name, description, icon }) => (
-            <button
-              key={name}
-              onClick={() => handleConnect(name, config)}
-              disabled={isConnecting}
-              className="w-full p-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-[#E70606] rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-2xl w-10 text-center">{icon}</span>
+          {walletConfigs.map(({ config, name, description, icon, disabled, installUrl }) => (
+            disabled && installUrl ? (
+              <a
+                key={name}
+                href={installUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full p-4 bg-gray-800/30 border border-gray-700 border-dashed rounded-xl transition-all group flex items-center gap-4"
+              >
+                <span className="text-2xl w-10 text-center opacity-50">{icon}</span>
                 <div className="text-left flex-1">
-                  <h3 className="font-jost font-bold group-hover:text-[#E70606] transition-colors">
-                    {name}
-                  </h3>
-                  <p className="text-gray-400 text-sm font-jost">
-                    {connectingId === name ? 'Connecting...' : description}
-                  </p>
+                  <h3 className="font-jost font-bold text-gray-500">{name}</h3>
+                  <p className="text-gray-500 text-sm font-jost">{description}</p>
                 </div>
-                {connectingId === name && (
-                  <Loader className="w-4 h-4 animate-spin text-[#E70606] shrink-0" />
-                )}
-              </div>
-            </button>
+                <span className="text-xs text-[#E70606] font-jost font-semibold shrink-0">Install</span>
+              </a>
+            ) : (
+              <button
+                key={name}
+                onClick={() => handleConnect(name, config)}
+                disabled={isConnecting || disabled}
+                className="w-full p-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-[#E70606] rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-2xl w-10 text-center">{icon}</span>
+                  <div className="text-left flex-1">
+                    <h3 className="font-jost font-bold group-hover:text-[#E70606] transition-colors">
+                      {name}
+                    </h3>
+                    <p className="text-gray-400 text-sm font-jost">
+                      {connectingId === name ? 'Connecting...' : description}
+                    </p>
+                  </div>
+                  {connectingId === name && (
+                    <Loader className="w-4 h-4 animate-spin text-[#E70606] shrink-0" />
+                  )}
+                </div>
+              </button>
+            )
           ))}
 
           <div className="pt-4 border-t border-gray-700">

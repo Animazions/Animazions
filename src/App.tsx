@@ -22,10 +22,12 @@ import { MyProjects } from './components/MyProjects';
 import { AuthProvider } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+const WC_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? '';
+
 const supportedWallets = [
-  metamaskWallet(),
+  metamaskWallet({ recommended: true }),
   coinbaseWallet(),
-  walletConnect(),
+  ...(WC_PROJECT_ID ? [walletConnect({ projectId: WC_PROJECT_ID })] : [walletConnect()]),
   trustWallet(),
   rainbowWallet(),
   phantomWallet(),
