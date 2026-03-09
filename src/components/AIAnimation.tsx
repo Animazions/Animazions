@@ -44,6 +44,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string>('');
+  const [customPanels, setCustomPanels] = useState<number | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -420,6 +421,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   };
 
   const getStoryboardSlots = () => {
+    if (customPanels && customPanels > 0) return customPanels;
     if (clipDuration === 5) return 3;
     if (clipDuration === 15) return 5;
     return 9;
@@ -793,6 +795,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 <Upload className="w-5 h-5" />
                 Upload Image
               </button>
+              <p className="mt-2 text-xs font-jost text-gray-400">All uploaded images are saved in the storyboard below</p>
             </div>
           </div>
 
@@ -829,26 +832,23 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </div>
           )}
 
-          <div className="flex items-start gap-4">
-            <button
-              onClick={handleGenerateImage}
-              disabled={generatingImage}
-              className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
-            >
-              {generatingImage ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate Image
-                </>
-              )}
-            </button>
-            <p className="mt-6 text-xs font-jost text-gray-400">All uploaded images are saved in the storyboard below</p>
-          </div>
+          <button
+            onClick={handleGenerateImage}
+            disabled={generatingImage}
+            className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+          >
+            {generatingImage ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Generate Image
+              </>
+            )}
+          </button>
 
           {generatedImage && (
             <div className="mt-6">
@@ -901,9 +901,12 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               {[5, 15, 30].map((duration) => (
                 <button
                   key={duration}
-                  onClick={() => setClipDuration(duration as 5 | 15 | 30)}
+                  onClick={() => {
+                    setClipDuration(duration as 5 | 15 | 30);
+                    setCustomPanels(null);
+                  }}
                   className={`px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all border ${
-                    clipDuration === duration
+                    clipDuration === duration && customPanels === null
                       ? 'bg-[#E70606] border-[#E70606]'
                       : 'bg-black border-gray-700 hover:border-[#E70606]'
                   }`}
@@ -916,6 +919,11 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 min="1"
                 max="20"
                 placeholder="Custom"
+                value={customPanels || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseInt(e.target.value, 10) : null;
+                  setCustomPanels(value);
+                }}
                 className="px-4 py-2 rounded-lg font-chakra text-sm bg-black border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition-colors w-24"
               />
             </div>
@@ -925,11 +933,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             It is recommended to have roughly 3 images per 5 second video generated but each AI model operates differently so please feel free to experiment. Generated images from above can be added here.
           </p>
 
-          <div className={`grid gap-4 mb-4 ${
-            clipDuration === 5 ? 'grid-cols-3' :
-            clipDuration === 15 ? 'grid-cols-5' :
-            'grid-cols-3 md:grid-cols-5 lg:grid-cols-9'
-          }`}>
+          <div
+            className="grid gap-4 mb-4"
+            style={{ gridTemplateColumns: `repeat(${customPanels || getStoryboardSlots()}, minmax(0, 1fr))` }}
+          >
             {Array.from({ length: getStoryboardSlots() }).map((_, index) => (
               <div
                 key={index}
