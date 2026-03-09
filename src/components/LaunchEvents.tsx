@@ -1,4 +1,4 @@
-import { TrendingUp, Users, Clock, Target } from 'lucide-react';
+import { TrendingUp, Users, Clock } from 'lucide-react';
 import { salesData } from '../data/salesData';
 
 interface LaunchEventsProps {

@@ -32,7 +32,8 @@ export function WalletModal({ isOpen, onClose, onConnect }: WalletModalProps) {
 
   if (!isOpen) return null;
 
-  const handleConnect = async (walletName: string, config: (typeof walletConfigs)[0]['config']) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleConnect = async (walletName: string, config: any) => {
     try {
       setError(null);
       setConnectingId(walletName);

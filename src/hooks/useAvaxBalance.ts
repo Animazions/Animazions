@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAddress } from '@thirdweb-dev/react';
 
-const AVAX_DECIMALS = 18;
 const MIN_AVAX_REQUIRED = 0.1;
 
 export function useAvaxBalance() {

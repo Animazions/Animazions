@@ -1,4 +1,4 @@
-import { Clock, Users, Target, TrendingUp, Shield, Zap, Heart, MessageSquare } from 'lucide-react';
+import { Clock, Users, Target, Shield, Zap, Heart } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { getSaleById } from '../data/salesData';
 
@@ -7,14 +7,13 @@ interface TokenSaleDetailProps {
   onNavigate?: (page: string) => void;
 }
 
-export function TokenSaleDetail({ saleId = 1, onNavigate }: TokenSaleDetailProps) {
+export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
   const [amount, setAmount] = useState('');
   const [activeTab, setActiveTab] = useState('details');
   const [liked, setLiked] = useState(false);
 
   const sale = useMemo(() => {
-    const found = getSaleById(saleId);
-    return found || getSaleById(1);
+    return (getSaleById(saleId) ?? getSaleById(1))!;
   }, [saleId]);
 
   const handleBuy = () => {
