@@ -301,11 +301,28 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
   };
 
-  const uploadBlobToStorage = async (blobUrl: string, folder: string, index: number): Promise<string | null> => {
+  const uploadImageToStorage = async (imageUrl: string, folder: string, index: number): Promise<string | null> => {
     try {
-      const response = await fetch(blobUrl);
-      const blob = await response.blob();
-      const ext = blob.type.split('/')[1] || 'jpg';
+      let blob: Blob;
+
+      if (imageUrl.startsWith('data:')) {
+        const [header, base64Data] = imageUrl.split(',');
+        const mimeMatch = header.match(/data:([^;]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const byteString = atob(base64Data);
+        const byteArray = new Uint8Array(byteString.length);
+        for (let i = 0; i < byteString.length; i++) {
+          byteArray[i] = byteString.charCodeAt(i);
+        }
+        blob = new Blob([byteArray], { type: mimeType });
+      } else if (imageUrl.startsWith('blob:')) {
+        const response = await fetch(imageUrl);
+        blob = await response.blob();
+      } else {
+        return imageUrl;
+      }
+
+      const ext = blob.type.split('/')[1]?.split('+')[0] || 'jpg';
       const fileName = `${user!.id}/${folder}_${Date.now()}_${index}.${ext}`;
 
       const { error } = await supabase.storage
@@ -355,10 +372,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       const storyboardUploadPromises = storyboardImages.map((url, i) =>
-        url.startsWith('blob:') ? uploadBlobToStorage(url, 'storyboard', i) : Promise.resolve(url)
+        (url.startsWith('blob:') || url.startsWith('data:')) ? uploadImageToStorage(url, 'storyboard', i) : Promise.resolve(url)
       );
       const moodboardUploadPromises = moodboardImages.map((url, i) =>
-        url.startsWith('blob:') ? uploadBlobToStorage(url, 'moodboard', i) : Promise.resolve(url)
+        (url.startsWith('blob:') || url.startsWith('data:')) ? uploadImageToStorage(url, 'moodboard', i) : Promise.resolve(url)
       );
 
       const [storyboardPublicUrls, moodboardPublicUrls] = await Promise.all([
