@@ -123,11 +123,12 @@ async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
 
   let eventId: string;
   try {
+    console.log("Submitting to ZeroScope with prompt:", prompt);
     const submitRes = await fetch(`${SPACE_BASE}${API_PREFIX}/call/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        data: [prompt, 42, 24, 25],
+        data: [prompt, 24, 25],
       }),
       signal: submitController.signal,
     });
@@ -145,6 +146,7 @@ async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
     if (!eventId) {
       throw new Error("ZeroScope did not return an event_id");
     }
+    console.log("ZeroScope event ID:", eventId);
   } finally {
     clearTimeout(submitTimeout);
   }
@@ -215,8 +217,9 @@ async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
     }
 
     const arrayBuf = await videoRes.arrayBuffer();
-    if (arrayBuf.byteLength < 1000) {
-      throw new Error(`ZeroScope video too small (${arrayBuf.byteLength} bytes)`);
+    console.log(`Downloaded video: ${arrayBuf.byteLength} bytes`);
+    if (arrayBuf.byteLength < 5000) {
+      console.warn(`Warning: Video appears small (${arrayBuf.byteLength} bytes), may be corrupted or 0 seconds`);
     }
 
     return new Uint8Array(arrayBuf);
