@@ -15,15 +15,24 @@ interface WalletModalProps {
   onConnect: () => void;
 }
 
-function detectMetaMask(): boolean {
-  if (typeof window === 'undefined') return false;
+function getMetaMaskProvider(): any {
+  if (typeof window === 'undefined') return null;
   const eth = window.ethereum as any;
-  if (!eth) return false;
-  if (eth.providers?.some((p: any) => p.isMetaMask && !p.isPhantom)) return true;
-  return Boolean(eth.isMetaMask && !eth.isPhantom && !eth.isBraveWallet);
+  if (!eth) return null;
+  if (eth.providers?.length) {
+    return eth.providers.find((p: any) => p.isMetaMask && !p.isPhantom && !p.isBraveWallet) ?? null;
+  }
+  if (eth.isMetaMask && !eth.isPhantom && !eth.isBraveWallet) return eth;
+  return null;
 }
 
-const isMetaMaskInstalled = detectMetaMask();
+const isMetaMaskInstalled = Boolean(getMetaMaskProvider());
+
+async function connectMetaMaskDirect(): Promise<string[]> {
+  const provider = getMetaMaskProvider();
+  if (!provider) throw new Error('MetaMask not found');
+  return provider.request({ method: 'eth_requestAccounts' });
+}
 
 const walletConfigs = [
   {
@@ -52,11 +61,47 @@ export function WalletModal({ isOpen, onClose, onConnect }: WalletModalProps) {
     try {
       setError(null);
       setConnectingId(walletName);
-      await connect(config, {});
+
+      if (walletName === 'MetaMask') {
+        const mmProvider = getMetaMaskProvider();
+        if (!mmProvider) throw new Error('MetaMask extension not found.');
+
+        const originalEthereum = (window as any).ethereum;
+        const needsSwap = originalEthereum !== mmProvider;
+
+        if (needsSwap) {
+          Object.defineProperty(window, 'ethereum', {
+            value: mmProvider,
+            writable: true,
+            configurable: true,
+          });
+        }
+
+        try {
+          await connectMetaMaskDirect();
+          await connect(config, {});
+        } finally {
+          if (needsSwap) {
+            Object.defineProperty(window, 'ethereum', {
+              value: originalEthereum,
+              writable: true,
+              configurable: true,
+            });
+          }
+        }
+      } else {
+        await connect(config, {});
+      }
+
       onConnect();
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Failed to connect. Please try again.');
+      const msg = err?.message || '';
+      if (msg.includes('User rejected') || msg.includes('user rejected') || msg.includes('4001')) {
+        setError('Connection rejected. Please approve the request in MetaMask.');
+      } else {
+        setError(msg || 'Failed to connect. Please try again.');
+      }
     } finally {
       setConnectingId(null);
     }
