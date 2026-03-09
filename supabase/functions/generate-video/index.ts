@@ -115,23 +115,19 @@ function buildEnhancedPrompt(
 }
 
 async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
-  const SPACE_URL = "https://hysts-zeroscope-v2.hf.space";
+  const SPACE_BASE = "https://hysts-zeroscope-v2.hf.space";
+  const API_PREFIX = "/gradio_api";
 
   const submitController = new AbortController();
   const submitTimeout = setTimeout(() => submitController.abort(), 30000);
 
   let eventId: string;
   try {
-    const submitRes = await fetch(`${SPACE_URL}/call/run`, {
+    const submitRes = await fetch(`${SPACE_BASE}${API_PREFIX}/call/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        data: [
-          prompt,
-          42,
-          24,
-          25,
-        ],
+        data: [prompt, 42, 24, 25],
       }),
       signal: submitController.signal,
     });
@@ -157,7 +153,7 @@ async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
   const pollTimeout = setTimeout(() => pollController.abort(), 300000);
 
   try {
-    const pollRes = await fetch(`${SPACE_URL}/call/run/${eventId}`, {
+    const pollRes = await fetch(`${SPACE_BASE}${API_PREFIX}/call/run/${eventId}`, {
       signal: pollController.signal,
     });
 
@@ -183,13 +179,17 @@ async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
 
       if (buffer.includes("event: complete")) {
         const lines = buffer.split("\n");
-        const dataLine = lines.find((l) => l.startsWith("data:") && l.includes("url"));
+        const dataLine = lines.find((l) => l.startsWith("data:"));
         if (dataLine) {
           const jsonStr = dataLine.replace(/^data:\s*/, "");
           try {
             const parsed = JSON.parse(jsonStr);
-            const fileData = Array.isArray(parsed) ? parsed[0] : parsed;
-            videoUrl = fileData?.url || fileData?.path || null;
+            const item = Array.isArray(parsed) ? parsed[0] : parsed;
+            const fileData = item?.video ?? item;
+            const rawUrl: string = fileData?.url || fileData?.path || "";
+            videoUrl = rawUrl.startsWith("http")
+              ? rawUrl
+              : `${SPACE_BASE}${API_PREFIX}/file=${rawUrl}`;
           } catch {
             throw new Error("Failed to parse ZeroScope result");
           }
