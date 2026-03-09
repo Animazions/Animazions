@@ -935,7 +935,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
           <div
             className="grid gap-4 mb-4"
-            style={{ gridTemplateColumns: `repeat(${customPanels || getStoryboardSlots()}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.min(customPanels || getStoryboardSlots(), 4)}, minmax(0, 1fr))` }}
           >
             {Array.from({ length: getStoryboardSlots() }).map((_, index) => (
               <div
