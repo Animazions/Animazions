@@ -13,6 +13,23 @@
   }
 }
 
+/* Thirdweb ConnectWallet: ensure balance text is visible */
+[data-rk] button[data-testid="connect-wallet-button"],
+[class*="tw-connected-wallet"] {
+  height: auto !important;
+  min-height: unset !important;
+}
+
+[class*="tw-connected-wallet__address"],
+[class*="tw-connected-wallet__balance"] {
+  display: block !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: inherit !important;
+}
+
 @layer utilities {
   .font-jost {
     font-family: 'Jost', sans-serif;

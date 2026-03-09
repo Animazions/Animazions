@@ -1,7 +1,7 @@
 import { Menu, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
+import { ConnectWallet } from '@thirdweb-dev/react';
 import { useAuth } from '../contexts/AuthContext';
-import { WalletButton } from './WalletButton';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -46,7 +46,24 @@ export function Header({ onNavigate }: HeaderProps) {
                 My Projects
               </button>
             )}
-            <WalletButton />
+            <ConnectWallet
+              theme="dark"
+              btnTitle="Connect Wallet"
+              modalTitle="Connect Your Wallet"
+              switchToActiveChain={false}
+              showThirdwebBranding={false}
+              style={{
+                background: '#E70606',
+                padding: '8px 24px',
+                borderRadius: '8px',
+                fontFamily: 'var(--font-chakra)',
+                fontSize: '14px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                minWidth: 'unset',
+                height: 'auto',
+              }}
+            />
           </nav>
 
           <button
@@ -80,7 +97,13 @@ export function Header({ onNavigate }: HeaderProps) {
                 My Projects
               </button>
             )}
-            <WalletButton />
+            <ConnectWallet
+              theme="dark"
+              btnTitle="Connect Wallet"
+              modalTitle="Connect Your Wallet"
+              switchToActiveChain={false}
+              showThirdwebBranding={false}
+            />
           </nav>
         )}
       </div>
