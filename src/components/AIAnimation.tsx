@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, FolderOpen, CreditCard, BookOpen, Play, Pause, AlertCircle, Loader, ChevronLeft, ChevronUp, ChevronDown, Download } from 'lucide-react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, FolderOpen, CreditCard, BookOpen, Play, Pause, AlertCircle, Loader, ChevronLeft, ChevronUp, ChevronDown, Download, Maximize } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -31,6 +31,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [playingVideos, setPlayingVideos] = useState<boolean[]>([false, false, false, false]);
   const [hoveredVideo, setHoveredVideo] = useState<number | null>(null);
   const [videoPosters, setVideoPosters] = useState<(string | null)[]>([null, null, null, null]);
+  const [fullscreenVideoIndex, setFullscreenVideoIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [lastSaved, setLastSaved] = useState<string>('');
@@ -1261,7 +1262,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             {communityVideos.map((video, index) => (
               <div
                 key={index}
-                className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden hover:border-[#E70606] transition-all"
+                className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden hover:border-[#E70606] transition-all group"
                 onMouseEnter={() => setHoveredVideo(index)}
                 onMouseLeave={() => setHoveredVideo(null)}
               >
@@ -1299,10 +1300,48 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                     </div>
                   </button>
                 )}
+
+                {/* Fullscreen button — shown on hover */}
+                <button
+                  onClick={() => setFullscreenVideoIndex(index)}
+                  className="absolute top-3 right-3 bg-black/60 hover:bg-[#E70606] rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-all shadow-lg backdrop-blur-sm"
+                  title="Fullscreen"
+                >
+                  <Maximize className="w-4 h-4 text-white" />
+                </button>
               </div>
             ))}
           </div>
         </section>
+
+        {/* Fullscreen Video Modal */}
+        {fullscreenVideoIndex !== null && (
+          <div
+            className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={() => setFullscreenVideoIndex(null)}
+          >
+            <div
+              className="relative w-full h-full max-w-6xl max-h-[90vh] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <video
+                key={`fullscreen-${fullscreenVideoIndex}`}
+                src={communityVideos[fullscreenVideoIndex].src}
+                className="w-full h-full object-contain"
+                autoPlay
+                controls
+                preload="metadata"
+              />
+              <button
+                onClick={() => setFullscreenVideoIndex(null)}
+                className="absolute top-6 right-6 bg-black/60 hover:bg-[#E70606] rounded-lg p-3 transition-all shadow-lg backdrop-blur-sm"
+                title="Close fullscreen"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+          </div>
+        )}
 
         </div>
       </div>
