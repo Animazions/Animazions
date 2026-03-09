@@ -4,21 +4,49 @@ import { ConnectWallet, useAddress } from '@thirdweb-dev/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAvaxBalance } from '../hooks/useAvaxBalance';
 
-function WalletBalanceBadge() {
+function ConnectedButton() {
   const address = useAddress();
   const { balance, loading } = useAvaxBalance();
 
   if (!address) return null;
 
+  const short = `${address.slice(0, 6)}...${address.slice(-4)}`;
+
   return (
-    <div className="flex items-center gap-1.5 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-      <span className="font-chakra text-xs text-gray-300 uppercase tracking-wider">
+    <div
+      style={{
+        background: '#E70606',
+        padding: '8px 20px',
+        borderRadius: '8px',
+        fontFamily: 'var(--font-chakra)',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        lineHeight: 1.3,
+      }}
+    >
+      <span style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
+        {short}
+      </span>
+      <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)', marginTop: '2px' }}>
         {loading ? '...' : balance !== null ? `${balance} AVAX` : '0 AVAX'}
       </span>
     </div>
   );
 }
+
+const connectWalletStyle: React.CSSProperties = {
+  background: '#E70606',
+  padding: '8px 24px',
+  borderRadius: '8px',
+  fontFamily: 'var(--font-chakra)',
+  fontSize: '14px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  minWidth: 'unset',
+  height: 'auto',
+};
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -63,24 +91,14 @@ export function Header({ onNavigate }: HeaderProps) {
                 My Projects
               </button>
             )}
-            <WalletBalanceBadge />
             <ConnectWallet
               theme="dark"
               btnTitle="Connect Wallet"
               modalTitle="Connect Your Wallet"
               switchToActiveChain={false}
               showThirdwebBranding={false}
-              style={{
-                background: '#E70606',
-                padding: '8px 24px',
-                borderRadius: '8px',
-                fontFamily: 'var(--font-chakra)',
-                fontSize: '14px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                minWidth: 'unset',
-                height: 'auto',
-              }}
+              detailsBtn={() => <ConnectedButton />}
+              style={connectWalletStyle}
             />
           </nav>
 
@@ -115,13 +133,13 @@ export function Header({ onNavigate }: HeaderProps) {
                 My Projects
               </button>
             )}
-            <WalletBalanceBadge />
             <ConnectWallet
               theme="dark"
               btnTitle="Connect Wallet"
               modalTitle="Connect Your Wallet"
               switchToActiveChain={false}
               showThirdwebBranding={false}
+              detailsBtn={() => <ConnectedButton />}
             />
           </nav>
         )}
