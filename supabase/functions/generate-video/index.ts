@@ -187,10 +187,17 @@ async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
             const item = Array.isArray(parsed) ? parsed[0] : parsed;
             const fileData = item?.video ?? item;
             const rawUrl: string = fileData?.url || fileData?.path || "";
-            videoUrl = rawUrl.startsWith("http")
-              ? rawUrl
-              : `${SPACE_BASE}${API_PREFIX}/file=${rawUrl}`;
-          } catch {
+            console.log("ZeroScope response:", { parsed, fileData, rawUrl });
+            if (rawUrl.startsWith("http")) {
+              videoUrl = rawUrl;
+            } else if (rawUrl.startsWith("/file")) {
+              videoUrl = `${SPACE_BASE}${rawUrl}`;
+            } else {
+              videoUrl = `${SPACE_BASE}/file=${rawUrl}`;
+            }
+            console.log("Constructed video URL:", videoUrl);
+          } catch (err) {
+            console.error("Failed to parse ZeroScope result:", err);
             throw new Error("Failed to parse ZeroScope result");
           }
         }
