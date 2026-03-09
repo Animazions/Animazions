@@ -90,6 +90,7 @@ function buildPrompt(
 
 function generateVideoUrl(prompt: string, duration: number = 5): string {
   const encodedPrompt = encodeURIComponent(prompt);
-  const pollUrl = `https://image.pollinations.ai/video?prompt=${encodedPrompt}&width=1024&height=576&duration=${duration}`;
+  const durationSeconds = Math.max(5, Math.min(15, duration));
+  const pollUrl = `https://image.pollinations.ai/video?prompt=${encodedPrompt}&width=1024&height=576&duration=${durationSeconds}&fps=24`;
   return pollUrl;
 }

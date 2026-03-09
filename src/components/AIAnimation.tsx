@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, FolderOpen, CreditCard, BookOpen, Play, Pause, AlertCircle, Loader, ChevronLeft } from 'lucide-react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, FolderOpen, CreditCard, BookOpen, Play, Pause, AlertCircle, Loader, ChevronLeft, ChevronUp, ChevronDown, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -41,6 +41,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [videoGenError, setVideoGenError] = useState<string>('');
   const [draggedVideoIndex, setDraggedVideoIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string>('');
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -420,6 +422,63 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
   const addVideoToSequence = (videoUrl: string) => {
     setVideoSequence(prev => [...prev, videoUrl]);
+  };
+
+  const moveVideoUp = (index: number) => {
+    if (index === 0) return;
+    const newSequence = [...videoSequence];
+    [newSequence[index - 1], newSequence[index]] = [newSequence[index], newSequence[index - 1]];
+    setVideoSequence(newSequence);
+  };
+
+  const moveVideoDown = (index: number) => {
+    if (index === videoSequence.length - 1) return;
+    const newSequence = [...videoSequence];
+    [newSequence[index], newSequence[index + 1]] = [newSequence[index + 1], newSequence[index]];
+    setVideoSequence(newSequence);
+  };
+
+  const handleExportVideos = async () => {
+    if (videoSequence.length === 0) {
+      setExportError('No videos in sequence to export.');
+      return;
+    }
+
+    setExporting(true);
+    setExportError('');
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/join-videos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Apikey': supabaseKey,
+        },
+        body: JSON.stringify({
+          videoUrls: videoSequence,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Export failed');
+
+      if (data.downloadUrl) {
+        const link = document.createElement('a');
+        link.href = data.downloadUrl;
+        link.download = `animation_${Date.now()}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err: any) {
+      setExportError(err?.message || 'Failed to export video. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const communityImages = [
@@ -989,6 +1048,12 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                     <p className="text-white font-chakra text-sm uppercase">Drag to Editor</p>
                   </div>
+                  <button
+                    onClick={() => setGeneratedVideos(prev => prev.filter((_, i) => i !== index))}
+                    className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -1052,6 +1117,24 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                     </div>
                     <span className="font-chakra text-sm uppercase">Clip {index + 1}</span>
                   </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => moveVideoUp(index)}
+                      disabled={index === 0}
+                      className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-full p-2 transition-colors"
+                      title="Move up"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => moveVideoDown(index)}
+                      disabled={index === videoSequence.length - 1}
+                      className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-full p-2 transition-colors"
+                      title="Move down"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
                   <button
                     onClick={() => setVideoSequence(prev => prev.filter((_, i) => i !== index))}
                     className="bg-red-600 hover:bg-red-700 rounded-full p-2 transition-colors flex-shrink-0"
@@ -1063,9 +1146,30 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             )}
           </div>
 
+          {exportError && (
+            <div className="mt-4 bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-300 text-sm font-jost">{exportError}</p>
+            </div>
+          )}
+
           {videoSequence.length > 0 && (
-            <button className="mt-6 bg-[#E70606] hover:bg-[#c00505] px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105">
-              Export Final Video
+            <button
+              onClick={handleExportVideos}
+              disabled={exporting}
+              className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+            >
+              {exporting ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Joining Videos...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Join and Export Video
+                </>
+              )}
             </button>
           )}
         </section>
