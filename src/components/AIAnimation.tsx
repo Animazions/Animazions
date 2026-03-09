@@ -323,7 +323,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const prompt = `${videoPrompt}\n\nReference images context: Using ${storyboardImages.length} storyboard image(s) for visual consistency.`;
+      const totalImages = storyboardImages.length + moodboardImages.length;
+      const imageDetails = `Using ${storyboardImages.length} storyboard image(s)${moodboardImages.length > 0 ? ` and ${moodboardImages.length} mood board image(s)` : ''} for visual reference.`;
+      const prompt = `${videoPrompt}\n\n[Visual Reference: ${imageDetails}]`;
 
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video`, {
         method: 'POST',
@@ -335,8 +337,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         body: JSON.stringify({
           prompt,
           model: selectedVideoModel,
-          storyboardImages: storyboardImages.slice(0, 3),
-          moodboardImages: moodboardImages.slice(0, 2),
+          storyboardImages: storyboardImages,
+          moodboardImages: moodboardImages,
+          imageCount: totalImages,
         }),
       });
 

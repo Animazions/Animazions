@@ -11,6 +11,7 @@ interface VideoGenerationRequest {
   model: string;
   storyboardImages?: string[];
   moodboardImages?: string[];
+  imageCount?: number;
 }
 
 Deno.serve(async (req: Request) => {
