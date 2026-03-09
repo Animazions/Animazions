@@ -15,11 +15,19 @@ interface WalletModalProps {
   onConnect: () => void;
 }
 
-const isMetaMaskInstalled = typeof window !== 'undefined' && Boolean(window.ethereum?.isMetaMask);
+function detectMetaMask(): boolean {
+  if (typeof window === 'undefined') return false;
+  const eth = window.ethereum as any;
+  if (!eth) return false;
+  if (eth.providers?.some((p: any) => p.isMetaMask && !p.isPhantom)) return true;
+  return Boolean(eth.isMetaMask && !eth.isPhantom && !eth.isBraveWallet);
+}
+
+const isMetaMaskInstalled = detectMetaMask();
 
 const walletConfigs = [
   {
-    config: metamaskWallet(),
+    config: metamaskWallet({ shimDisconnect: true }),
     name: 'MetaMask',
     description: isMetaMaskInstalled ? 'Browser extension & mobile' : 'Extension not detected — install first',
     icon: '🦊',

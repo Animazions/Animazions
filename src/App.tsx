@@ -25,7 +25,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 const WC_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? '';
 
 const supportedWallets = [
-  metamaskWallet({ recommended: true }),
+  metamaskWallet({ recommended: true, shimDisconnect: true }),
   coinbaseWallet(),
   ...(WC_PROJECT_ID ? [walletConnect({ projectId: WC_PROJECT_ID })] : [walletConnect()]),
   trustWallet(),
