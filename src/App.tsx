@@ -78,25 +78,28 @@ function AppInner() {
   );
 }
 
+const THIRDWEB_CLIENT_ID = import.meta.env.VITE_THIRDWEB_CLIENT_ID ?? 'placeholder-client-id';
+const DAPP_META = {
+  name: 'Animazions',
+  description: 'AI Animation Platform',
+  logoUrl: 'https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png',
+  url: typeof window !== 'undefined' ? window.location.origin : '',
+};
+
 function App() {
   return (
-    <AuthProvider>
-      <ErrorBoundary>
-        <ThirdwebProvider
-          clientId={import.meta.env.VITE_THIRDWEB_CLIENT_ID ?? 'placeholder-client-id'}
-          supportedChains={supportedChains}
-          supportedWallets={supportedWallets}
-          dAppMeta={{
-            name: 'Animazions',
-            description: 'AI Animation Platform',
-            logoUrl: 'https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png',
-            url: typeof window !== 'undefined' ? window.location.origin : '',
-          }}
-        >
+    <ErrorBoundary>
+      <ThirdwebProvider
+        clientId={THIRDWEB_CLIENT_ID}
+        supportedChains={supportedChains}
+        supportedWallets={supportedWallets}
+        dAppMeta={DAPP_META}
+      >
+        <AuthProvider>
           <AppInner />
-        </ThirdwebProvider>
-      </ErrorBoundary>
-    </AuthProvider>
+        </AuthProvider>
+      </ThirdwebProvider>
+    </ErrorBoundary>
   );
 }
 

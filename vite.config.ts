@@ -22,6 +22,7 @@ export default defineConfig({
   publicDir: safePublicDir,
   plugins: [react()],
   resolve: {
+    dedupe: ['react', 'react-dom', 'ethers'],
     alias: {
       '@tanstack/react-query': path.resolve(
         __dirname,
@@ -31,6 +32,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
-    include: ['@thirdweb-dev/react-core > @tanstack/react-query'],
+    include: [
+      '@thirdweb-dev/react',
+      '@thirdweb-dev/react-core',
+    ],
   },
 });
