@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, LogIn, FolderOpen, CreditCard, BookOpen, Play, Pause, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, FolderOpen, CreditCard, BookOpen, Play, Pause, AlertCircle, Loader, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -8,8 +8,17 @@ interface AIAnimationProps {
   projectId?: string;
 }
 
+type AuthView = 'login' | 'signup' | 'reset';
+
 export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
-  const { user } = useAuth();
+  const { user, signIn, signUp, resetPassword, signOut } = useAuth();
+  const [authView, setAuthView] = useState<AuthView>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
   const [selectedImageModel, setSelectedImageModel] = useState('');
   const [selectedVideoModel, setSelectedVideoModel] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
@@ -174,6 +183,70 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     'AnimateDiff'
   ];
 
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthSuccess('');
+    setAuthLoading(true);
+
+    if (authView === 'login') {
+      const { error } = await signIn(authEmail, authPassword);
+      if (error) {
+        setAuthError(error);
+      } else {
+        setAuthEmail('');
+        setAuthPassword('');
+      }
+    } else if (authView === 'signup') {
+      if (authPassword !== authConfirmPassword) {
+        setAuthError('Passwords do not match');
+        setAuthLoading(false);
+        return;
+      }
+      if (authPassword.length < 8) {
+        setAuthError('Password must be at least 8 characters');
+        setAuthLoading(false);
+        return;
+      }
+      const { error } = await signUp(authEmail, authPassword);
+      if (error) {
+        setAuthError(error);
+      } else {
+        setAuthSuccess('Account created! Please log in.');
+        setTimeout(() => {
+          setAuthView('login');
+          setAuthSuccess('');
+          setAuthEmail('');
+          setAuthPassword('');
+          setAuthConfirmPassword('');
+        }, 2000);
+      }
+    } else if (authView === 'reset') {
+      const { error } = await resetPassword(authEmail);
+      if (error) {
+        setAuthError(error);
+      } else {
+        setAuthSuccess('Reset link sent! Check your email.');
+        setTimeout(() => {
+          setAuthView('login');
+          setAuthSuccess('');
+          setAuthEmail('');
+        }, 3000);
+      }
+    }
+
+    setAuthLoading(false);
+  };
+
+  const switchAuthView = (view: AuthView) => {
+    setAuthView(view);
+    setAuthError('');
+    setAuthSuccess('');
+    setAuthEmail('');
+    setAuthPassword('');
+    setAuthConfirmPassword('');
+  };
+
   const getStoryboardSlots = () => {
     if (clipDuration === 5) return 3;
     if (clipDuration === 15) return 5;
@@ -234,6 +307,12 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
                 <p className="text-xs text-gray-400 mb-1">Logged in as</p>
                 <p className="text-sm font-semibold truncate">{user.email}</p>
+                <button
+                  onClick={() => signOut()}
+                  className="mt-3 text-xs text-gray-500 hover:text-red-400 transition underline underline-offset-2"
+                >
+                  Log out
+                </button>
               </div>
               <div className="space-y-3">
                 <button
@@ -266,18 +345,122 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               )}
             </>
           ) : (
-            <>
-              <div className="space-y-3">
-                <button
-                  onClick={() => onNavigate('home')}
-                  className="w-full bg-[#E70606] hover:bg-[#c00505] px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Login
-                </button>
+            <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+              <div className="mb-4 text-center">
+                <h3 className="font-krona text-base text-white">
+                  {authView === 'login' && 'Login'}
+                  {authView === 'signup' && 'Create Account'}
+                  {authView === 'reset' && 'Reset Password'}
+                </h3>
+                {authView !== 'reset' && (
+                  <p className="text-xs text-gray-500 mt-1">Save and manage your projects</p>
+                )}
               </div>
-              <p className="text-xs text-gray-500 text-center">Login to save your projects</p>
-            </>
+
+              {authError && (
+                <div className="mb-3 p-2.5 bg-red-900/20 border border-red-500/50 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-300 text-xs">{authError}</p>
+                </div>
+              )}
+              {authSuccess && (
+                <div className="mb-3 p-2.5 bg-green-900/20 border border-green-500/50 rounded-lg">
+                  <p className="text-green-300 text-xs">{authSuccess}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleAuthSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-gray-400 text-xs font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full px-3 py-2 bg-black border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition"
+                    required
+                  />
+                </div>
+
+                {authView !== 'reset' && (
+                  <div>
+                    <label className="block text-gray-400 text-xs font-medium mb-1">Password</label>
+                    <input
+                      type="password"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 bg-black border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition"
+                      required
+                    />
+                    {authView === 'signup' && (
+                      <p className="text-xs text-gray-600 mt-1">Minimum 8 characters</p>
+                    )}
+                  </div>
+                )}
+
+                {authView === 'signup' && (
+                  <div>
+                    <label className="block text-gray-400 text-xs font-medium mb-1">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={authConfirmPassword}
+                      onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 bg-black border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition"
+                      required
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 text-white font-chakra text-xs uppercase tracking-wider py-2.5 rounded-lg transition flex items-center justify-center gap-2"
+                >
+                  {authLoading && <Loader className="w-3.5 h-3.5 animate-spin" />}
+                  {authView === 'login' && (authLoading ? 'Logging in...' : 'Login')}
+                  {authView === 'signup' && (authLoading ? 'Creating...' : 'Sign Up')}
+                  {authView === 'reset' && (authLoading ? 'Sending...' : 'Send Reset Link')}
+                </button>
+              </form>
+
+              <div className="mt-3 space-y-1.5 text-center">
+                {authView === 'login' && (
+                  <>
+                    <button
+                      onClick={() => switchAuthView('reset')}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition block w-full"
+                    >
+                      Forgot password?
+                    </button>
+                    <p className="text-xs text-gray-500">
+                      No account?{' '}
+                      <button onClick={() => switchAuthView('signup')} className="text-[#E70606] hover:text-red-400 transition font-semibold">
+                        Sign up
+                      </button>
+                    </p>
+                  </>
+                )}
+                {authView === 'signup' && (
+                  <p className="text-xs text-gray-500">
+                    Have an account?{' '}
+                    <button onClick={() => switchAuthView('login')} className="text-[#E70606] hover:text-red-400 transition font-semibold">
+                      Login
+                    </button>
+                  </p>
+                )}
+                {authView === 'reset' && (
+                  <button
+                    onClick={() => switchAuthView('login')}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition flex items-center justify-center gap-1 w-full"
+                  >
+                    <ChevronLeft className="w-3 h-3" />
+                    Back to login
+                  </button>
+                )}
+              </div>
+            </div>
           )}
 
           <div className="border-t border-gray-800 pt-4">

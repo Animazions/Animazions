@@ -1,10 +1,7 @@
-import { Menu, LogOut, FolderOpen } from 'lucide-react';
+import { Menu, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { ConnectWallet } from '@thirdweb-dev/react';
 import { useAuth } from '../contexts/AuthContext';
-import { LoginModal } from './modals/LoginModal';
-import { SignUpModal } from './modals/SignUpModal';
-import { ResetPasswordModal } from './modals/ResetPasswordModal';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -12,10 +9,7 @@ interface HeaderProps {
 
 export function Header({ onNavigate }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [signUpOpen, setSignUpOpen] = useState(false);
-  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   const handleNavigate = (page: string) => {
     if (onNavigate) onNavigate(page);
@@ -60,25 +54,6 @@ export function Header({ onNavigate }: HeaderProps) {
               showThirdwebBranding={false}
               className="!bg-[#E70606] hover:!bg-[#c00505] !px-6 !py-2 !rounded-lg !font-chakra !text-sm !uppercase !tracking-wider !transition-colors"
             />
-            {user ? (
-              <button
-                onClick={() => {
-                  signOut();
-                  setMenuOpen(false);
-                }}
-                className="bg-[#E70606] hover:bg-[#c00505] text-white px-4 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
-            ) : (
-              <button
-                onClick={() => setLoginOpen(true)}
-                className="bg-[#E70606] hover:bg-[#c00505] text-white px-4 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors"
-              >
-                Login
-              </button>
-            )}
           </nav>
 
           <button
@@ -119,56 +94,9 @@ export function Header({ onNavigate }: HeaderProps) {
               switchToActiveChain={false}
               showThirdwebBranding={false}
             />
-            {user ? (
-              <button
-                onClick={() => {
-                  signOut();
-                  setMenuOpen(false);
-                }}
-                className="bg-[#E70606] hover:bg-[#c00505] text-white px-4 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
-            ) : (
-              <button
-                onClick={() => setLoginOpen(true)}
-                className="bg-[#E70606] hover:bg-[#c00505] text-white px-4 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-colors"
-              >
-                Login
-              </button>
-            )}
           </nav>
         )}
       </div>
-
-      <LoginModal
-        isOpen={loginOpen}
-        onClose={() => setLoginOpen(false)}
-        onSignUpClick={() => {
-          setLoginOpen(false);
-          setSignUpOpen(true);
-        }}
-        onForgotPasswordClick={() => {
-          setLoginOpen(false);
-          setResetPasswordOpen(true);
-        }}
-      />
-
-      <SignUpModal
-        isOpen={signUpOpen}
-        onClose={() => setSignUpOpen(false)}
-        onLoginClick={() => {
-          setSignUpOpen(false);
-          setLoginOpen(true);
-        }}
-      />
-
-      <ResetPasswordModal
-        isOpen={resetPasswordOpen}
-        onClose={() => setResetPasswordOpen(false)}
-        onBackToLogin={() => setLoginOpen(true)}
-      />
     </header>
   );
 }
