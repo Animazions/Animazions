@@ -12,6 +12,7 @@ interface VideoGenerationRequest {
   storyboardImages?: string[];
   moodboardImages?: string[];
   imageCount?: number;
+  duration?: 5 | 10 | 15;
 }
 
 Deno.serve(async (req: Request) => {
@@ -24,7 +25,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: VideoGenerationRequest = await req.json();
-    const { prompt, model, storyboardImages = [], moodboardImages = [] } = body;
+    const { prompt, model, storyboardImages = [], moodboardImages = [], duration = 5 } = body;
 
     if (!prompt || !model) {
       return new Response(
@@ -47,7 +48,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const enhancedPrompt = buildPrompt(prompt, storyboardImages, moodboardImages);
-    const videoUrl = generateVideoUrl(enhancedPrompt);
+    const videoUrl = generateVideoUrl(enhancedPrompt, duration);
 
     return new Response(
       JSON.stringify({ videoUrl }),
@@ -87,8 +88,8 @@ function buildPrompt(
   return enhancedPrompt;
 }
 
-function generateVideoUrl(prompt: string): string {
+function generateVideoUrl(prompt: string, duration: number = 5): string {
   const encodedPrompt = encodeURIComponent(prompt);
-  const pollUrl = `https://image.pollinations.ai/video?prompt=${encodedPrompt}&width=1024&height=576&duration=5`;
+  const pollUrl = `https://image.pollinations.ai/video?prompt=${encodedPrompt}&width=1024&height=576&duration=${duration}`;
   return pollUrl;
 }

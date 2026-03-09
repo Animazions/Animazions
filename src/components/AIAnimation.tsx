@@ -23,7 +23,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [selectedVideoModel, setSelectedVideoModel] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
   const [videoPrompt, setVideoPrompt] = useState('');
-  const [clipDuration, setClipDuration] = useState<5 | 15 | 30>(5);
+  const [clipDuration, setClipDuration] = useState<5 | 10 | 15>(5);
   const [storyboardImages, setStoryboardImages] = useState<string[]>([]);
   const [moodboardImages, setMoodboardImages] = useState<string[]>([]);
   const [generatedVideos, setGeneratedVideos] = useState<string[]>([]);
@@ -39,6 +39,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [imageGenError, setImageGenError] = useState<string>('');
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoGenError, setVideoGenError] = useState<string>('');
+  const [draggedVideoIndex, setDraggedVideoIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -340,12 +342,17 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           storyboardImages: storyboardImages,
           moodboardImages: moodboardImages,
           imageCount: totalImages,
+          duration: clipDuration,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Video generation failed');
-      setGeneratedVideos(prev => [...prev, data.videoUrl]);
+      if (data.videoUrl) {
+        setGeneratedVideos(prev => [...prev, data.videoUrl]);
+      } else {
+        throw new Error('No video URL returned from generation');
+      }
     } catch (err: any) {
       setVideoGenError(err?.message || 'Video generation failed. Please try again.');
     } finally {
@@ -384,6 +391,35 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     } else {
       setMoodboardImages(prev => prev.filter((_, i) => i !== index));
     }
+  };
+
+  const handleDragStartVideo = (index: number) => {
+    setDraggedVideoIndex(index);
+  };
+
+  const handleDragOverSequence = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDropVideo = (index: number) => {
+    if (draggedVideoIndex === null || draggedVideoIndex === index) {
+      setDraggedVideoIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newSequence = [...videoSequence];
+    const draggedVideo = newSequence[draggedVideoIndex];
+    newSequence.splice(draggedVideoIndex, 1);
+    newSequence.splice(index, 0, draggedVideo);
+    setVideoSequence(newSequence);
+    setDraggedVideoIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const addVideoToSequence = (videoUrl: string) => {
+    setVideoSequence(prev => [...prev, videoUrl]);
   };
 
   const communityImages = [
@@ -880,6 +916,27 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             />
           </div>
 
+          <div className="mb-6">
+            <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400 mb-3">
+              Video Duration
+            </label>
+            <div className="flex gap-3">
+              {[5, 10, 15].map((duration) => (
+                <button
+                  key={duration}
+                  onClick={() => setClipDuration(duration as 5 | 10 | 15)}
+                  className={`px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all ${
+                    clipDuration === duration
+                      ? 'bg-[#E70606] text-white'
+                      : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#E70606]'
+                  }`}
+                >
+                  {duration}s
+                </button>
+              ))}
+            </div>
+          </div>
+
           {videoGenError && (
             <div className="mb-4 bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -910,17 +967,28 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         {generatedVideos.length > 0 && (
           <section className="mb-16">
             <h3 className="font-krona text-2xl mb-6">GENERATED VIDEOS</h3>
+            <p className="text-gray-400 font-jost mb-6">Drag videos below into the Video Editor to add them to your sequence.</p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {generatedVideos.map((video, index) => (
                 <div
                   key={index}
-                  className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group cursor-pointer"
+                  draggable
+                  onDragStart={() => {
+                    setDraggedVideoIndex(index);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedVideoIndex(null);
+                  }}
+                  className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group cursor-grab active:cursor-grabbing hover:border-[#E70606] transition-colors"
                 >
                   <video
                     src={video}
                     className="w-full h-full object-cover"
                     controls
                   />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                    <p className="text-white font-chakra text-sm uppercase">Drag to Editor</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -936,28 +1004,57 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
           <div className="space-y-4">
             {videoSequence.length === 0 ? (
-              <div className="border-2 border-dashed border-gray-700 rounded-lg p-12 text-center">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add('border-[#E70606]');
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-[#E70606]');
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('border-[#E70606]');
+                  if (draggedVideoIndex !== null) {
+                    addVideoToSequence(generatedVideos[draggedVideoIndex]);
+                    setDraggedVideoIndex(null);
+                  }
+                }}
+                className="border-2 border-dashed border-gray-700 rounded-lg p-12 text-center transition-colors"
+              >
                 <Film className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-500 font-jost">
-                  No videos in sequence yet. Generate videos above to start editing.
+                <p className="text-gray-500 font-jost mb-2">
+                  Drop videos here to start your sequence
+                </p>
+                <p className="text-gray-600 text-sm font-jost">
+                  or drag from the Generated Videos section above
                 </p>
               </div>
             ) : (
               videoSequence.map((video, index) => (
                 <div
                   key={index}
-                  className="bg-black border border-gray-700 rounded-lg p-4 flex items-center gap-4 hover:border-[#E70606] transition-colors cursor-move"
+                  draggable
+                  onDragStart={() => handleDragStartVideo(index)}
+                  onDragOver={(e) => handleDragOverSequence(e, index)}
+                  onDrop={() => handleDropVideo(index)}
+                  onDragLeave={() => setDragOverIndex(null)}
+                  className={`bg-black border rounded-lg p-4 flex items-center gap-4 transition-all cursor-move ${
+                    dragOverIndex === index
+                      ? 'border-[#E70606] bg-gray-800/50'
+                      : 'border-gray-700 hover:border-[#E70606]'
+                  }`}
                 >
                   <GripVertical className="w-5 h-5 text-gray-600" />
                   <div className="flex-1 flex items-center gap-4">
-                    <div className="w-32 h-20 bg-gray-900 rounded overflow-hidden">
+                    <div className="w-32 h-20 bg-gray-900 rounded overflow-hidden flex-shrink-0">
                       <video src={video} className="w-full h-full object-cover" />
                     </div>
                     <span className="font-chakra text-sm uppercase">Clip {index + 1}</span>
                   </div>
                   <button
                     onClick={() => setVideoSequence(prev => prev.filter((_, i) => i !== index))}
-                    className="bg-red-600 hover:bg-red-700 rounded-full p-2 transition-colors"
+                    className="bg-red-600 hover:bg-red-700 rounded-full p-2 transition-colors flex-shrink-0"
                   >
                     <X className="w-4 h-4" />
                   </button>
