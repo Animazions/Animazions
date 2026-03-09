@@ -233,9 +233,9 @@ async function fetchVideoFromPollinations(
   duration: number,
   imageUrls: string[]
 ): Promise<Uint8Array> {
-  const apiKey = Deno.env.get("POLLINATIONS_API_KEY");
+  const apiKey = Deno.env.get("Animazions");
   if (!apiKey) {
-    throw new Error("Video generation requires a Pollinations API key. Please configure POLLINATIONS_API_KEY in your project secrets.");
+    throw new Error("Video generation requires a Pollinations API key. Please configure Animazions in your project secrets.");
   }
 
   const clampedDuration = Math.max(2, Math.min(15, duration));
