@@ -301,6 +301,29 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
   };
 
+  const uploadBlobToStorage = async (blobUrl: string, folder: string, index: number): Promise<string | null> => {
+    try {
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      const ext = blob.type.split('/')[1] || 'jpg';
+      const fileName = `${user!.id}/${folder}_${Date.now()}_${index}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from('reference-images')
+        .upload(fileName, blob, { contentType: blob.type, upsert: true });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from('reference-images')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch {
+      return null;
+    }
+  };
+
   const handleGenerateVideo = async () => {
     if (!videoPrompt.trim()) {
       setVideoGenError('Please enter a video description first.');
@@ -319,6 +342,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       setVideoGenError('Please add at least one image to your storyboard before generating a video.');
       return;
     }
+    if (!user) {
+      setVideoGenError('You must be logged in to generate videos.');
+      return;
+    }
 
     setGeneratingVideo(true);
     setVideoGenError('');
@@ -327,9 +354,20 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const totalImages = storyboardImages.length + moodboardImages.length;
-      const imageDetails = `Using ${storyboardImages.length} storyboard image(s)${moodboardImages.length > 0 ? ` and ${moodboardImages.length} mood board image(s)` : ''} for visual reference.`;
-      const prompt = `${videoPrompt}\n\n[Visual Reference: ${imageDetails}]`;
+      const storyboardUploadPromises = storyboardImages.map((url, i) =>
+        url.startsWith('blob:') ? uploadBlobToStorage(url, 'storyboard', i) : Promise.resolve(url)
+      );
+      const moodboardUploadPromises = moodboardImages.map((url, i) =>
+        url.startsWith('blob:') ? uploadBlobToStorage(url, 'moodboard', i) : Promise.resolve(url)
+      );
+
+      const [storyboardPublicUrls, moodboardPublicUrls] = await Promise.all([
+        Promise.all(storyboardUploadPromises),
+        Promise.all(moodboardUploadPromises),
+      ]);
+
+      const validStoryboardUrls = storyboardPublicUrls.filter(Boolean) as string[];
+      const validMoodboardUrls = moodboardPublicUrls.filter(Boolean) as string[];
 
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video`, {
         method: 'POST',
@@ -339,12 +377,12 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           'Apikey': supabaseKey,
         },
         body: JSON.stringify({
-          prompt,
+          prompt: videoPrompt,
           model: selectedVideoModel,
-          storyboardImages: storyboardImages,
-          moodboardImages: moodboardImages,
-          imageCount: totalImages,
+          storyboardImageUrls: validStoryboardUrls,
+          moodboardImageUrls: validMoodboardUrls,
           duration: clipDuration,
+          userId: user.id,
         }),
       });
 
