@@ -51,10 +51,15 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const enhancedPrompt = buildEnhancedPrompt(prompt, storyboardImageUrls, moodboardImageUrls);
-
     const allImageUrls = [...storyboardImageUrls, ...moodboardImageUrls].filter(Boolean);
 
-    const videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
+    let videoBuffer: Uint8Array;
+
+    if (model === "ZeroScope v2 (FREE)") {
+      videoBuffer = await fetchVideoFromZeroScope(enhancedPrompt);
+    } else {
+      videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
+    }
 
     const fileName = `${userId}/${Date.now()}_clip_${duration}s.mp4`;
     const { error: uploadError } = await supabase.storage
@@ -107,6 +112,110 @@ function buildEnhancedPrompt(
 
   enhancedPrompt += `, high quality animation, cinematic, smooth motion`;
   return enhancedPrompt;
+}
+
+async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {
+  const SPACE_URL = "https://hysts-zeroscope-v2.hf.space";
+
+  const submitController = new AbortController();
+  const submitTimeout = setTimeout(() => submitController.abort(), 30000);
+
+  let eventId: string;
+  try {
+    const submitRes = await fetch(`${SPACE_URL}/call/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        data: [
+          prompt,
+          42,
+          24,
+          25,
+        ],
+      }),
+      signal: submitController.signal,
+    });
+
+    if (!submitRes.ok) {
+      const errText = await submitRes.text();
+      if (submitRes.status === 503 || submitRes.status === 502) {
+        throw new Error("ZeroScope Space is currently unavailable. Please try again later or use a different model.");
+      }
+      throw new Error(`ZeroScope submit failed (${submitRes.status}): ${errText.slice(0, 200)}`);
+    }
+
+    const submitData = await submitRes.json();
+    eventId = submitData.event_id;
+    if (!eventId) {
+      throw new Error("ZeroScope did not return an event_id");
+    }
+  } finally {
+    clearTimeout(submitTimeout);
+  }
+
+  const pollController = new AbortController();
+  const pollTimeout = setTimeout(() => pollController.abort(), 300000);
+
+  try {
+    const pollRes = await fetch(`${SPACE_URL}/call/run/${eventId}`, {
+      signal: pollController.signal,
+    });
+
+    if (!pollRes.ok || !pollRes.body) {
+      throw new Error(`ZeroScope polling failed (${pollRes.status})`);
+    }
+
+    const reader = pollRes.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let videoUrl: string | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      if (buffer.includes("event: error")) {
+        const dataLine = buffer.split("\n").find((l) => l.startsWith("data:"));
+        throw new Error(`ZeroScope generation error: ${dataLine || "unknown"}`);
+      }
+
+      if (buffer.includes("event: complete")) {
+        const lines = buffer.split("\n");
+        const dataLine = lines.find((l) => l.startsWith("data:") && l.includes("url"));
+        if (dataLine) {
+          const jsonStr = dataLine.replace(/^data:\s*/, "");
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const fileData = Array.isArray(parsed) ? parsed[0] : parsed;
+            videoUrl = fileData?.url || fileData?.path || null;
+          } catch {
+            throw new Error("Failed to parse ZeroScope result");
+          }
+        }
+        break;
+      }
+    }
+
+    if (!videoUrl) {
+      throw new Error("ZeroScope did not return a video URL");
+    }
+
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) {
+      throw new Error(`Failed to download ZeroScope video (${videoRes.status})`);
+    }
+
+    const arrayBuf = await videoRes.arrayBuffer();
+    if (arrayBuf.byteLength < 1000) {
+      throw new Error(`ZeroScope video too small (${arrayBuf.byteLength} bytes)`);
+    }
+
+    return new Uint8Array(arrayBuf);
+  } finally {
+    clearTimeout(pollTimeout);
+  }
 }
 
 async function fetchVideoFromPollinations(
