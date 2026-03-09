@@ -20,6 +20,7 @@ import { TokenSaleDetail } from './components/TokenSaleDetail';
 import { AIAnimation } from './components/AIAnimation';
 import { MyProjects } from './components/MyProjects';
 import { AuthProvider } from './contexts/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const supportedWallets = [
   metamaskWallet(),
@@ -80,18 +81,21 @@ function AppInner() {
 function App() {
   return (
     <AuthProvider>
-      <ThirdwebProvider
-        supportedChains={supportedChains}
-        supportedWallets={supportedWallets}
-        dAppMeta={{
-          name: 'Animazions',
-          description: 'AI Animation Platform',
-          logoUrl: 'https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png',
-          url: typeof window !== 'undefined' ? window.location.origin : '',
-        }}
-      >
-        <AppInner />
-      </ThirdwebProvider>
+      <ErrorBoundary>
+        <ThirdwebProvider
+          clientId={import.meta.env.VITE_THIRDWEB_CLIENT_ID ?? 'placeholder-client-id'}
+          supportedChains={supportedChains}
+          supportedWallets={supportedWallets}
+          dAppMeta={{
+            name: 'Animazions',
+            description: 'AI Animation Platform',
+            logoUrl: 'https://animazions.com/wp-content/uploads/2025/10/asdasda-01-01-1.png',
+            url: typeof window !== 'undefined' ? window.location.origin : '',
+          }}
+        >
+          <AppInner />
+        </ThirdwebProvider>
+      </ErrorBoundary>
     </AuthProvider>
   );
 }
