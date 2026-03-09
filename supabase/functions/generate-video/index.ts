@@ -114,6 +114,11 @@ async function fetchVideoFromPollinations(
   duration: number,
   imageUrls: string[]
 ): Promise<Uint8Array> {
+  const apiKey = Deno.env.get("POLLINATIONS_API_KEY");
+  if (!apiKey) {
+    throw new Error("Video generation requires a Pollinations API key. Please configure POLLINATIONS_API_KEY in your project secrets.");
+  }
+
   const clampedDuration = Math.max(2, Math.min(15, duration));
   const encodedPrompt = encodeURIComponent(prompt);
 
@@ -130,23 +135,30 @@ async function fetchVideoFromPollinations(
     params.set("image", imageUrls.slice(0, 4).join("|"));
   }
 
-  const url = `https://gen.pollinations.ai/image/${encodedPrompt}?${params.toString()}`;
+  const url = `https://gen.pollinations.ai/video/${encodedPrompt}?${params.toString()}`;
   console.log("Fetching video from Pollinations:", url);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 240000);
+  const timeoutId = setTimeout(() => controller.abort(), 300000);
 
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
+        "Authorization": `Bearer ${apiKey}`,
         "User-Agent": "AnimationStudio/1.0",
       },
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Pollinations API error ${response.status}: ${errorText}`);
+      if (response.status === 401) {
+        throw new Error("Video generation API key is invalid or expired. Please update your POLLINATIONS_API_KEY secret.");
+      }
+      if (response.status === 402) {
+        throw new Error("Insufficient Pollinations credits to generate video. Please top up your account at pollinations.ai.");
+      }
+      throw new Error(`Video generation failed (${response.status}): ${errorText.slice(0, 300)}`);
     }
 
     const contentType = response.headers.get("content-type") || "";
