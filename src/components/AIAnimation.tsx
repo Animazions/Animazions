@@ -558,7 +558,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white focus:outline-none focus:border-[#E70606] transition-colors"
               >
                 <option value="">Select an AI image generator</option>
-                <optgroup label="-- FREE (No API Key Required) --">
+                <optgroup label="-- FREE --">
                   {imageModels.filter(m => m.free).map(model => (
                     <option key={model.name} value={model.name}>{model.name} — FREE</option>
                   ))}
