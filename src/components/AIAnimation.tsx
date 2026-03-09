@@ -34,6 +34,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [lastSaved, setLastSaved] = useState<string>('');
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [imageGenError, setImageGenError] = useState<string>('');
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -158,16 +161,18 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   }, [captureFrame]);
 
   const imageModels = [
-    'DALL-E 3',
-    'Midjourney',
-    'Stable Diffusion XL',
-    'Leonardo AI',
-    'Ideogram',
-    'Flux Pro',
-    'Adobe Firefly',
-    'DreamStudio',
-    'Playground AI',
-    'Bing Image Creator'
+    { name: 'Flux (Pollinations)', free: true },
+    { name: 'Turbo (Pollinations)', free: true },
+    { name: 'DALL-E 3', free: false },
+    { name: 'Midjourney', free: false },
+    { name: 'Stable Diffusion XL', free: false },
+    { name: 'Leonardo AI', free: false },
+    { name: 'Ideogram', free: false },
+    { name: 'Flux Pro', free: false },
+    { name: 'Adobe Firefly', free: false },
+    { name: 'DreamStudio', free: false },
+    { name: 'Playground AI', free: false },
+    { name: 'Bing Image Creator', free: false },
   ];
 
   const videoModels = [
@@ -245,6 +250,48 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setAuthEmail('');
     setAuthPassword('');
     setAuthConfirmPassword('');
+  };
+
+  const handleGenerateImage = async () => {
+    if (!imagePrompt.trim()) {
+      setImageGenError('Please enter a prompt first.');
+      return;
+    }
+    if (!selectedImageModel) {
+      setImageGenError('Please select an AI model first.');
+      return;
+    }
+    const model = imageModels.find(m => m.name === selectedImageModel);
+    if (!model?.free) {
+      setImageGenError(`${selectedImageModel} requires a paid subscription. Please select a free model (marked FREE).`);
+      return;
+    }
+
+    setGeneratingImage(true);
+    setImageGenError('');
+    setGeneratedImage(null);
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Apikey': supabaseKey,
+        },
+        body: JSON.stringify({ prompt: imagePrompt, model: selectedImageModel }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
+      setGeneratedImage(data.imageUrl);
+    } catch (err: any) {
+      setImageGenError(err?.message || 'Image generation failed. Please try again.');
+    } finally {
+      setGeneratingImage(false);
+    }
   };
 
   const getStoryboardSlots = () => {
@@ -511,9 +558,16 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white focus:outline-none focus:border-[#E70606] transition-colors"
               >
                 <option value="">Select an AI image generator</option>
-                {imageModels.map(model => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
+                <optgroup label="-- FREE (No API Key Required) --">
+                  {imageModels.filter(m => m.free).map(model => (
+                    <option key={model.name} value={model.name}>{model.name} — FREE</option>
+                  ))}
+                </optgroup>
+                <optgroup label="-- Paid / Subscription Required --">
+                  {imageModels.filter(m => !m.free).map(model => (
+                    <option key={model.name} value={model.name}>{model.name}</option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
@@ -543,10 +597,54 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             />
           </div>
 
-          <button className="mt-6 bg-[#E70606] hover:bg-[#c00505] px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            Generate Image
+          {imageGenError && (
+            <div className="mt-4 bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-300 text-sm font-jost">{imageGenError}</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleGenerateImage}
+            disabled={generatingImage}
+            className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+          >
+            {generatingImage ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Generate Image
+              </>
+            )}
           </button>
+
+          {generatedImage && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-chakra text-sm uppercase tracking-wider text-gray-400">Generated Image</p>
+                <button
+                  onClick={() => {
+                    setStoryboardImages(prev => [...prev, generatedImage].slice(0, getStoryboardSlots()));
+                    setMoodboardImages(prev => [...prev, generatedImage]);
+                  }}
+                  className="text-xs font-chakra uppercase tracking-wider text-[#E70606] hover:text-red-400 transition border border-[#E70606] hover:border-red-400 px-3 py-1.5 rounded-lg"
+                >
+                  + Add to Storyboard & Moodboard
+                </button>
+              </div>
+              <div className="relative rounded-xl overflow-hidden border border-gray-700 max-w-lg">
+                <img
+                  src={generatedImage}
+                  alt="AI Generated"
+                  className="w-full object-contain"
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         {/* 2. Storyboard Section */}
