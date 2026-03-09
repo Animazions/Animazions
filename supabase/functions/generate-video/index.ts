@@ -261,6 +261,7 @@ async function fetchVideoFromPollinations(
   const timeoutId = setTimeout(() => controller.abort(), 300000);
 
   try {
+    console.log("Using API key:", apiKey.substring(0, 10) + "...");
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
@@ -271,8 +272,10 @@ async function fetchVideoFromPollinations(
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("Pollinations response status:", response.status);
+      console.error("Pollinations error:", errorText);
       if (response.status === 401) {
-        throw new Error("Video generation API key is invalid or expired. Please update your POLLINATIONS_API_KEY secret.");
+        throw new Error("Video generation API key is invalid or expired. Please verify your POLLINATIONS_API_KEY is correct and has available credits.");
       }
       if (response.status === 402) {
         throw new Error("Insufficient Pollinations credits to generate video. Please top up your account at pollinations.ai.");
