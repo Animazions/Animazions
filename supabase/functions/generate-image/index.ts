@@ -70,6 +70,11 @@ Deno.serve(async (req: Request) => {
     corsHeaders: Record<string, string>
   ): Promise<Response> {
     try {
+      const modelMap: Record<string, string> = {
+        "nano-banana-pro": "nano-banana-pro",
+        "qwen-image": "qwen-vl-max",
+      };
+
       const taskResponse = await fetch("https://api.kie.ai/api/v1/playground/createTask", {
         method: "POST",
         headers: {
@@ -77,7 +82,7 @@ Deno.serve(async (req: Request) => {
           "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model_name: model,
+          model: modelMap[model] || model,
           prompt: prompt,
         }),
       });
