@@ -586,36 +586,82 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setExportError('');
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to get canvas context');
 
-      const res = await fetch(`${supabaseUrl}/functions/v1/join-videos`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Apikey': supabaseKey,
-        },
-        body: JSON.stringify({
-          videoUrls: videoSequence,
-        }),
+      const stream = canvas.captureStream(30);
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 2500000,
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Export failed');
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+
+      const videos: HTMLVideoElement[] = [];
+      const videoDurations: number[] = [];
+
+      for (const videoUrl of videoSequence) {
+        const video = document.createElement('video');
+        video.src = videoUrl;
+        video.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          video.onloadedmetadata = () => {
+            videoDurations.push(video.duration);
+            videos.push(video);
+            resolve();
+          };
+          video.onerror = () => reject(new Error(`Failed to load video: ${videoUrl}`));
+        });
       }
 
-      const blob = await res.blob();
+      mediaRecorder.start();
+
+      let currentTime = 0;
+      const totalDuration = videoDurations.reduce((a, b) => a + b, 0);
+      const startTime = Date.now();
+
+      const renderFrame = () => {
+        const elapsed = (Date.now() - startTime) / 1000;
+
+        if (elapsed >= totalDuration) {
+          mediaRecorder.stop();
+          return;
+        }
+
+        let accumulatedTime = 0;
+        for (let i = 0; i < videos.length; i++) {
+          const videoDuration = videoDurations[i];
+          if (elapsed >= accumulatedTime && elapsed < accumulatedTime + videoDuration) {
+            const videoTime = elapsed - accumulatedTime;
+            videos[i].currentTime = videoTime;
+            ctx.drawImage(videos[i], 0, 0, canvas.width, canvas.height);
+            break;
+          }
+          accumulatedTime += videoDuration;
+        }
+
+        requestAnimationFrame(renderFrame);
+      };
+
+      await new Promise<void>((resolve) => {
+        mediaRecorder.onstop = () => resolve();
+        renderFrame();
+      });
+
+      const blob = new Blob(chunks, { type: 'video/webm' });
 
       if (blob.size === 0) {
-        throw new Error('Received empty video file');
+        throw new Error('Failed to create video');
       }
 
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.href = url;
-      link.download = `animation_${Date.now()}.mp4`;
+      link.download = `animation_${Date.now()}.webm`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
