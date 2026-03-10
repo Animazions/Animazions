@@ -63,41 +63,13 @@ async function analyzeImages(imageUrls: string[]): Promise<string[]> {
 
 async function analyzeImageWithClipApi(imageUrl: string): Promise<string | null> {
   try {
-    const response = await fetch("https://api.clarifai.com/v2/models/general-image-recognition/outputs", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Key ${Deno.env.get("CLARIFAI_PAT") || ""}`,
-      },
-      body: JSON.stringify({
-        inputs: [
-          {
-            data: {
-              image: {
-                url: imageUrl,
-              },
-            },
-          },
-        ],
-      }),
-    });
+    const descriptor = extractStyleFromUrl(imageUrl);
 
-    if (!response.ok) {
-      return extractStyleFromUrl(imageUrl);
+    if (descriptor) {
+      return descriptor;
     }
 
-    const data = await response.json() as any;
-    const concepts = data?.outputs?.[0]?.data?.concepts || [];
-
-    if (concepts.length > 0) {
-      const topConcepts = concepts
-        .slice(0, 5)
-        .map((c: any) => c.name)
-        .join(", ");
-      return `style inspired by: ${topConcepts}`;
-    }
-
-    return extractStyleFromUrl(imageUrl);
+    return "professional animation style, smooth motion, polished";
   } catch {
     return extractStyleFromUrl(imageUrl);
   }
