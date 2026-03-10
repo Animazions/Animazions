@@ -26,7 +26,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("KIE_AI_API_KEY not configured");
     }
 
-    const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/taskInfo?taskId=${taskId}`, {
+    const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
