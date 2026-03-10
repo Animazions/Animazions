@@ -288,19 +288,61 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Apikey': supabaseKey,
+      };
+
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Apikey': supabaseKey,
-        },
+        headers,
         body: JSON.stringify({ prompt: imagePrompt, model: selectedImageModel }),
       });
 
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
-      setGeneratedImage(data.imageUrl);
+
+      if (data.imageUrl) {
+        setGeneratedImage(data.imageUrl);
+        return;
+      }
+
+      if (data.taskId) {
+        const taskId = data.taskId;
+        const maxAttempts = 60;
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, 3000));
+          attempts++;
+
+          const statusRes = await fetch(`${supabaseUrl}/functions/v1/check-image-status`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ taskId }),
+          });
+
+          const statusData = await statusRes.json();
+
+          if (!statusRes.ok || statusData.error) {
+            throw new Error(statusData.error || 'Status check failed');
+          }
+
+          if (statusData.status === 'success' && statusData.imageUrl) {
+            setGeneratedImage(statusData.imageUrl);
+            return;
+          }
+
+          if (statusData.status === 'failed') {
+            throw new Error(statusData.error || 'Image generation failed on the server.');
+          }
+        }
+
+        throw new Error('Image generation timed out. The image may still be processing — please try again shortly.');
+      }
+
+      throw new Error('Unexpected response from generation service.');
     } catch (err: any) {
       setImageGenError(err?.message || 'Image generation failed. Please try again.');
     } finally {
