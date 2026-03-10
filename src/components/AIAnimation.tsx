@@ -184,9 +184,6 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   ];
 
   const videoModels = [
-    { name: 'Pollinations Video (FREE)', free: true },
-    { name: 'ZeroScope v2 (FREE)', free: true },
-    { name: 'Sora 2 (FREE)', free: true },
     { name: 'Seedance 1.5 Pro (FREE)', free: true },
     { name: 'Runway Gen-3', free: false },
     { name: 'Pika Labs', free: false },
