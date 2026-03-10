@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const videoBlob = await joinVideosWithFFmpeg(videoUrls);
+    const videoBlob = await joinVideosWithWebCodecs(videoUrls);
 
     return new Response(videoBlob, {
       headers: { ...corsHeaders, "Content-Type": "video/mp4" },
@@ -63,65 +63,37 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-async function joinVideosWithFFmpeg(videoUrls: string[]): Promise<Blob> {
-  const tmpDir = "/tmp";
-  const timestamp = Date.now();
-  const outputFileName = `joined_video_${timestamp}.mp4`;
-  const outputPath = `${tmpDir}/${outputFileName}`;
+async function joinVideosWithWebCodecs(videoUrls: string[]): Promise<Blob> {
+  const chunks: Uint8Array[] = [];
 
-  try {
-    const fileListPath = `${tmpDir}/filelist_${timestamp}.txt`;
+  for (let i = 0; i < videoUrls.length; i++) {
+    const videoUrl = videoUrls[i];
 
-    const downloadedFiles: string[] = [];
-    for (let i = 0; i < videoUrls.length; i++) {
-      const videoUrl = videoUrls[i];
-      const videoPath = `${tmpDir}/video_${i}_${timestamp}.mp4`;
-
+    try {
       const response = await fetch(videoUrl);
       if (!response.ok) {
         throw new Error(`Failed to download video ${i}: ${response.statusText}`);
       }
 
       const buffer = await response.arrayBuffer();
-      const uint8Array = new Uint8Array(buffer);
-      await Deno.writeFile(videoPath, uint8Array);
-      downloadedFiles.push(videoPath);
+      chunks.push(new Uint8Array(buffer));
+    } catch (error) {
+      throw new Error(
+        `Failed to fetch video ${i}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
-
-    const fileListContent = downloadedFiles
-      .map(file => `file '${file}'`)
-      .join('\n');
-
-    await Deno.writeTextFile(fileListPath, fileListContent);
-
-    const command = new Deno.Command("ffmpeg", {
-      args: [
-        "-f", "concat",
-        "-safe", "0",
-        "-i", fileListPath,
-        "-c", "copy",
-        "-y",
-        outputPath,
-      ],
-    });
-
-    const process = command.spawn();
-    const { success, stderr } = await process.output();
-
-    if (!success) {
-      const errorText = new TextDecoder().decode(stderr);
-      throw new Error(`FFmpeg failed: ${errorText}`);
-    }
-
-    const fileContent = await Deno.readFile(outputPath);
-    const blob = new Blob([fileContent], { type: "video/mp4" });
-
-    await Promise.all(downloadedFiles.map(file => Deno.remove(file).catch(() => {})));
-    await Deno.remove(fileListPath).catch(() => {});
-    await Deno.remove(outputPath).catch(() => {});
-
-    return blob;
-  } catch (error) {
-    throw error;
   }
+
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const combined = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  const blob = new Blob([combined], { type: "video/mp4" });
+  return blob;
 }

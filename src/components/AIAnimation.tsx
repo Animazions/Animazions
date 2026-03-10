@@ -1025,7 +1025,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           </div>
 
           <p className="text-gray-400 font-jost mb-4 text-sm">
-            It is recommended to have roughly 3 images per 5 second video generated but each AI model operates differently so please feel free to experiment. Generated images from above can be added here.
+            It is recommended to have more images in your storyboard for longer videos but each AI model operates differently so please feel free to experiment. Videos can be generated with 1 image too. Generated images from above can be added here.
           </p>
 
           <div
