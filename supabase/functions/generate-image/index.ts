@@ -22,45 +22,36 @@ Deno.serve(async (req: Request) => {
     }
 
     const encodedPrompt = encodeURIComponent(prompt.trim());
-    let imageUrl: string;
     const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
 
     if (model === "Flux (Pollinations)") {
-      imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      return new Response(
+        JSON.stringify({ imageUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     } else if (model === "Turbo (Pollinations)") {
-      imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=turbo&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=turbo&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      return new Response(
+        JSON.stringify({ imageUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     } else if (model === "Nano Banana Pro") {
-      if (!kieApiKey) {
-        throw new Error("Nano Banana Pro requires KIE_AI_API_KEY configuration");
-      }
+      if (!kieApiKey) throw new Error("Nano Banana Pro requires KIE_AI_API_KEY configuration");
       return await generateWithKieAi(prompt.trim(), "nano-banana-pro", kieApiKey, corsHeaders);
     } else if (model === "Qwen Image") {
-      if (!kieApiKey) {
-        throw new Error("Qwen Image requires KIE_AI_API_KEY configuration");
-      }
+      if (!kieApiKey) throw new Error("Qwen Image requires KIE_AI_API_KEY configuration");
       return await generateWithKieAi(prompt.trim(), "qwen-vl-max", kieApiKey, corsHeaders);
     } else if (model === "Seedream 5.0 Lite") {
-      if (!kieApiKey) {
-        throw new Error("Seedream 5.0 Lite requires KIE_AI_API_KEY configuration");
-      }
+      if (!kieApiKey) throw new Error("Seedream 5.0 Lite requires KIE_AI_API_KEY configuration");
       return await generateWithKieAi(prompt.trim(), "seedream/5-lite-text-to-image", kieApiKey, corsHeaders, { quality: "basic" });
     } else {
-      imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      return new Response(
+        JSON.stringify({ imageUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    const imageRes = await fetch(imageUrl);
-    if (!imageRes.ok) {
-      throw new Error(`Image generation failed: ${imageRes.status} ${imageRes.statusText}`);
-    }
-
-    const arrayBuffer = await imageRes.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    const dataUrl = `data:image/jpeg;base64,${base64}`;
-
-    return new Response(
-      JSON.stringify({ imageUrl: dataUrl }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (err: any) {
     return new Response(
       JSON.stringify({ error: err?.message || "Internal server error" }),
@@ -105,7 +96,7 @@ Deno.serve(async (req: Request) => {
       }
 
       let imageUrl: string | null = null;
-      const maxRetries = 60;
+      const maxRetries = 25;
       let retryCount = 0;
 
       while (retryCount < maxRetries && !imageUrl) {
@@ -140,20 +131,11 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!imageUrl) {
-        throw new Error("Image generation timed out or no result URL returned");
+        throw new Error("Image generation timed out. Please try again.");
       }
-
-      const imageRes = await fetch(imageUrl);
-      if (!imageRes.ok) {
-        throw new Error(`Failed to fetch image from KIE.AI: ${imageRes.status}`);
-      }
-
-      const arrayBuffer = await imageRes.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      const dataUrl = `data:image/jpeg;base64,${base64}`;
 
       return new Response(
-        JSON.stringify({ imageUrl: dataUrl }),
+        JSON.stringify({ imageUrl }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (err: any) {
