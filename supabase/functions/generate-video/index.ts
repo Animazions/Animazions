@@ -311,31 +311,35 @@ async function fetchVideoFromKieAi(
     throw new Error("Sora 2 video generation requires KIE_AI_API_KEY configuration");
   }
 
-  const clampedDuration = Math.max(5, Math.min(60, duration));
+  const nFrames = duration >= 15 ? "15" : "10";
 
-  const taskResponse = await fetch("https://api.kie.ai/api/v1/playground/createTask", {
+  const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${kieApiKey}`,
     },
     body: JSON.stringify({
-      model_name: "sora-2",
-      prompt: prompt,
-      api_key: kieApiKey,
-      duration: clampedDuration,
+      model: "sora-2-text-to-video",
+      input: {
+        prompt: prompt,
+        aspect_ratio: "landscape",
+        n_frames: nFrames,
+        remove_watermark: true,
+      },
     }),
   });
 
-  if (!taskResponse.ok) {
-    const errorData = await taskResponse.text();
-    throw new Error(`KIE.AI API error (${taskResponse.status}): ${errorData}`);
+  const taskData = await taskResponse.json() as any;
+
+  if (!taskResponse.ok || taskData.code !== 200) {
+    throw new Error(`KIE.AI API error: ${taskData.msg || JSON.stringify(taskData)}`);
   }
 
-  const taskData = await taskResponse.json() as any;
-  const taskId = taskData.task_id;
+  const taskId = taskData.data?.taskId;
 
   if (!taskId) {
-    throw new Error("No task ID returned from KIE.AI");
+    throw new Error(`No task ID returned from KIE.AI. Response: ${JSON.stringify(taskData)}`);
   }
 
   let videoUrl: string | null = null;
@@ -343,22 +347,31 @@ async function fetchVideoFromKieAi(
   let retryCount = 0;
 
   while (retryCount < maxRetries && !videoUrl) {
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
-    const statusResponse = await fetch(`https://api.kie.ai/api/v1/playground/recordInfo?task_id=${taskId}`, {
+    const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
       method: "GET",
       headers: {
-        "Content-Type": "application/json",
+        "Authorization": `Bearer ${kieApiKey}`,
       },
     });
 
     if (statusResponse.ok) {
       const statusData = await statusResponse.json() as any;
-      if (statusData.status === "success" && statusData.output_url) {
-        videoUrl = statusData.output_url;
+      const state = statusData.data?.state;
+
+      if (state === "success") {
+        const resultJson = statusData.data?.resultJson;
+        if (resultJson) {
+          const parsed = JSON.parse(resultJson);
+          videoUrl = parsed.resultUrls?.[0] || null;
+        }
+        if (!videoUrl) {
+          throw new Error("Task succeeded but no video URL found in result");
+        }
         break;
-      } else if (statusData.status === "failed") {
-        throw new Error(`KIE.AI task failed: ${statusData.error || "Unknown error"}`);
+      } else if (state === "fail") {
+        throw new Error(`KIE.AI task failed: ${statusData.data?.failMsg || "Unknown error"}`);
       }
     }
 
@@ -366,7 +379,7 @@ async function fetchVideoFromKieAi(
   }
 
   if (!videoUrl) {
-    throw new Error("Video generation timed out or failed");
+    throw new Error("Video generation timed out after 10 minutes");
   }
 
   const videoRes = await fetch(videoUrl);
