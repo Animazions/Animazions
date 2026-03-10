@@ -12,6 +12,7 @@ interface VideoGenerationRequest {
   model: string;
   storyboardImageUrls?: string[];
   moodboardImageUrls?: string[];
+  storyboardPrompts?: string[];
   duration?: 5 | 10 | 15;
   userId: string;
 }
@@ -28,6 +29,7 @@ Deno.serve(async (req: Request) => {
       model,
       storyboardImageUrls = [],
       moodboardImageUrls = [],
+      storyboardPrompts = [],
       duration = 5,
       userId,
     } = body;
@@ -50,7 +52,16 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const enhancedPrompt = buildEnhancedPrompt(prompt, storyboardImageUrls, moodboardImageUrls);
+    let styleDescriptors: string[] = [];
+    if (storyboardImageUrls.length > 0) {
+      try {
+        styleDescriptors = await extractImageStyles(storyboardImageUrls);
+      } catch (err) {
+        console.warn("Failed to extract image styles:", err);
+      }
+    }
+
+    const enhancedPrompt = buildEnhancedPrompt(prompt, storyboardImageUrls, moodboardImageUrls, styleDescriptors, storyboardPrompts);
     const allImageUrls = [...storyboardImageUrls, ...moodboardImageUrls].filter(Boolean);
 
     let videoBuffer: Uint8Array;
@@ -102,20 +113,61 @@ Deno.serve(async (req: Request) => {
 function buildEnhancedPrompt(
   userPrompt: string,
   storyboardUrls: string[],
-  moodboardUrls: string[]
+  moodboardUrls: string[],
+  styleDescriptors: string[] = [],
+  storyboardPrompts: string[] = []
 ): string {
   let enhancedPrompt = userPrompt;
 
+  const styleDetails = styleDescriptors.length > 0
+    ? styleDescriptors.join("; ")
+    : "professional animation style";
+
+  const originalImageContext = storyboardPrompts.length > 0
+    ? `These storyboard images were originally created using the following creative briefs: ${storyboardPrompts.join("; ")}. `
+    : "";
+
   if (storyboardUrls.length > 0) {
-    enhancedPrompt += `. CRITICAL: Base the entire animation on these storyboard reference images. Every frame must feature the same characters, subjects, environments, and visual elements shown in the storyboard. Match the character designs, facial features, clothing, poses, backgrounds, and scenes exactly as depicted in the storyboard panels. The animation must flow naturally from one storyboard frame to the next, maintaining complete visual consistency throughout`;
+    enhancedPrompt += `. CRITICAL STYLE INSTRUCTIONS: ${originalImageContext}The animation MUST match the exact visual style, art direction, and aesthetic shown in the provided storyboard images. ${styleDetails}. Maintain consistent character designs, clothing, facial features, poses, backgrounds, and environments exactly as they appear in the storyboard. Do not deviate from the established visual style, color palette, or artistic direction. Every frame must authentically reflect the storyboard's creative vision`;
   }
 
   if (moodboardUrls.length > 0) {
-    enhancedPrompt += `. Use these mood board references ONLY for color palette, lighting style, atmosphere, artistic style, and overall aesthetic. Extract the mood, tone, visual effects, and stylistic approach from the mood board, but apply them to the storyboard's characters and scenes. Do not introduce new characters or objects from the mood board—use it only as a style guide`;
+    enhancedPrompt += `. Use mood board images ONLY to reinforce and enhance the established visual style from the storyboard. Extract and apply the atmosphere, lighting, color grading, and emotional tone from the mood board while keeping all characters, objects, and environments from the storyboard unchanged`;
   }
 
-  enhancedPrompt += `. High quality animation, cinematic, smooth motion, professional quality, seamless transitions between scenes`;
+  enhancedPrompt += `. Deliver high-quality animation with cinematic production value, smooth motion, seamless transitions, and professional polish`;
   return enhancedPrompt;
+}
+
+async function extractImageStyles(imageUrls: string[]): Promise<string[]> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/analyze-image-style`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "Apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({ imageUrls: imageUrls.slice(0, 3) }),
+      }
+    );
+
+    if (!response.ok) {
+      console.warn("Image analysis API returned non-OK status:", response.status);
+      return [];
+    }
+
+    const data = await response.json() as any;
+    return data.styleDescriptors || [];
+  } catch (err) {
+    console.warn("Error calling image analysis API:", err);
+    return [];
+  }
 }
 
 async function fetchVideoFromZeroScope(prompt: string): Promise<Uint8Array> {

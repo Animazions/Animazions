@@ -25,6 +25,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [videoPrompt, setVideoPrompt] = useState('');
   const [clipDuration, setClipDuration] = useState<5 | 10 | 15>(5);
   const [storyboardImages, setStoryboardImages] = useState<string[]>([]);
+  const [storyboardImagePrompts, setStoryboardImagePrompts] = useState<string[]>([]);
   const [moodboardImages, setMoodboardImages] = useState<string[]>([]);
   const [generatedVideos, setGeneratedVideos] = useState<string[]>([]);
   const [videoSequence, setVideoSequence] = useState<string[]>([]);
@@ -69,6 +70,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             videoPrompt,
             clipDuration,
             storyboardImages,
+            storyboardImagePrompts,
             moodboardImages,
             generatedVideos,
             videoSequence,
@@ -107,6 +109,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setVideoPrompt(state.videoPrompt || '');
         setClipDuration(state.clipDuration || 5);
         setStoryboardImages(state.storyboardImages || []);
+        setStoryboardImagePrompts(state.storyboardImagePrompts || []);
         setMoodboardImages(state.moodboardImages || []);
         setGeneratedVideos(state.generatedVideos || []);
         setVideoSequence(state.videoSequence || []);
@@ -312,6 +315,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         return;
       }
 
+      setStoryboardImagePrompts(prev => [...prev, imagePrompt]);
+
       if (data.taskId) {
         const taskId = data.taskId;
         const maxAttempts = 60;
@@ -457,6 +462,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           model: selectedVideoModel,
           storyboardImageUrls: validStoryboardUrls,
           moodboardImageUrls: validMoodboardUrls,
+          storyboardPrompts: storyboardImagePrompts,
           duration: clipDuration,
           userId: user.id,
         }),
@@ -931,6 +937,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                   <button
                     onClick={() => {
                       setStoryboardImages(prev => [...prev, generatedImage].slice(0, getStoryboardSlots()));
+                      setStoryboardImagePrompts(prev => [...prev, imagePrompt]);
                     }}
                     className="text-xs font-chakra uppercase tracking-wider text-[#E70606] hover:text-red-400 transition border border-[#E70606] hover:border-red-400 px-3 py-1.5 rounded-lg"
                   >
