@@ -320,11 +320,12 @@ async function fetchVideoFromKieAi(
       "Authorization": `Bearer ${kieApiKey}`,
     },
     body: JSON.stringify({
-      model: "sora-2-text-to-video",
+      model: "sora-2-pro-text-to-video",
       input: {
         prompt: prompt,
         aspect_ratio: "landscape",
         n_frames: nFrames,
+        size: "standard",
         remove_watermark: true,
       },
     }),
