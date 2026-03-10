@@ -313,32 +313,60 @@ async function fetchVideoFromKieAi(
 
   const clampedDuration = Math.max(5, Math.min(60, duration));
 
-  const response = await fetch("https://api.kie.ai/v1/videos/generations", {
+  const taskResponse = await fetch("https://api.kie.ai/api/v1/playground/createTask", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${kieApiKey}`,
     },
     body: JSON.stringify({
-      prompt,
-      model: "sora-2",
+      model_name: "sora-2",
+      prompt: prompt,
+      api_key: kieApiKey,
       duration: clampedDuration,
     }),
   });
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    if (response.status === 429) {
-      throw new Error("KIE.AI API rate limit exceeded. Please try again later.");
-    }
-    throw new Error(`KIE.AI video generation failed (${response.status}): ${errorData}`);
+  if (!taskResponse.ok) {
+    const errorData = await taskResponse.text();
+    throw new Error(`KIE.AI API error (${taskResponse.status}): ${errorData}`);
   }
 
-  const data = await response.json() as any;
-  const videoUrl = data.data?.[0]?.url;
+  const taskData = await taskResponse.json() as any;
+  const taskId = taskData.task_id;
+
+  if (!taskId) {
+    throw new Error("No task ID returned from KIE.AI");
+  }
+
+  let videoUrl: string | null = null;
+  const maxRetries = 120;
+  let retryCount = 0;
+
+  while (retryCount < maxRetries && !videoUrl) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const statusResponse = await fetch(`https://api.kie.ai/api/v1/playground/recordInfo?task_id=${taskId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json() as any;
+      if (statusData.status === "success" && statusData.output_url) {
+        videoUrl = statusData.output_url;
+        break;
+      } else if (statusData.status === "failed") {
+        throw new Error(`KIE.AI task failed: ${statusData.error || "Unknown error"}`);
+      }
+    }
+
+    retryCount++;
+  }
 
   if (!videoUrl) {
-    throw new Error("No video URL returned from KIE.AI");
+    throw new Error("Video generation timed out or failed");
   }
 
   const videoRes = await fetch(videoUrl);

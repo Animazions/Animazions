@@ -70,30 +70,59 @@ Deno.serve(async (req: Request) => {
     corsHeaders: Record<string, string>
   ): Promise<Response> {
     try {
-      const response = await fetch("https://api.kie.ai/v1/images/generations", {
+      const taskResponse = await fetch("https://api.kie.ai/api/v1/playground/createTask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          prompt,
-          model,
-          n: 1,
-          size: "1024x1024",
+          model_name: model,
+          prompt: prompt,
+          api_key: apiKey,
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`KIE.AI API error (${response.status}): ${errorData}`);
+      if (!taskResponse.ok) {
+        const errorData = await taskResponse.text();
+        throw new Error(`KIE.AI API error (${taskResponse.status}): ${errorData}`);
       }
 
-      const data = await response.json() as any;
-      const imageUrl = data.data?.[0]?.url;
+      const taskData = await taskResponse.json() as any;
+      const taskId = taskData.task_id;
+
+      if (!taskId) {
+        throw new Error("No task ID returned from KIE.AI");
+      }
+
+      let imageUrl: string | null = null;
+      const maxRetries = 60;
+      let retryCount = 0;
+
+      while (retryCount < maxRetries && !imageUrl) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const statusResponse = await fetch(`https://api.kie.ai/api/v1/playground/recordInfo?task_id=${taskId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json() as any;
+          if (statusData.status === "success" && statusData.output_url) {
+            imageUrl = statusData.output_url;
+            break;
+          } else if (statusData.status === "failed") {
+            throw new Error(`KIE.AI task failed: ${statusData.error || "Unknown error"}`);
+          }
+        }
+
+        retryCount++;
+      }
 
       if (!imageUrl) {
-        throw new Error("No image URL returned from KIE.AI");
+        throw new Error("Image generation timed out or failed");
       }
 
       const imageRes = await fetch(imageUrl);
