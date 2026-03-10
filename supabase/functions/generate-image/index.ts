@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
       if (!kieApiKey) {
         throw new Error("Qwen Image requires KIE_AI_API_KEY configuration");
       }
-      return await generateWithKieAi(prompt.trim(), "qwen-image", kieApiKey, corsHeaders);
+      return await generateWithKieAi(prompt.trim(), "qwen-vl-max", kieApiKey, corsHeaders);
     } else {
       imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
     }
@@ -70,30 +70,28 @@ Deno.serve(async (req: Request) => {
     corsHeaders: Record<string, string>
   ): Promise<Response> {
     try {
-      const modelMap: Record<string, string> = {
-        "nano-banana-pro": "nano-banana-pro",
-        "qwen-image": "qwen-vl-max",
-      };
-
-      const taskResponse = await fetch("https://api.kie.ai/api/v1/playground/createTask", {
+      const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: modelMap[model] || model,
-          prompt: prompt,
+          model: model,
+          input: {
+            prompt: prompt,
+            aspect_ratio: "1:1",
+          },
         }),
       });
 
-      if (!taskResponse.ok) {
-        const errorData = await taskResponse.text();
-        throw new Error(`KIE.AI API error (${taskResponse.status}): ${errorData}`);
+      const taskData = await taskResponse.json() as any;
+
+      if (!taskResponse.ok || taskData.code !== 200) {
+        throw new Error(`KIE.AI API error (${taskResponse.status}): ${JSON.stringify(taskData)}`);
       }
 
-      const taskData = await taskResponse.json() as any;
-      const taskId = taskData.task_id || taskData.id || taskData.taskId;
+      const taskId = taskData.data?.taskId || taskData.data?.task_id || taskData.taskId;
 
       if (!taskId) {
         throw new Error(`No task ID returned from KIE.AI. Response: ${JSON.stringify(taskData)}`);
@@ -104,22 +102,30 @@ Deno.serve(async (req: Request) => {
       let retryCount = 0;
 
       while (retryCount < maxRetries && !imageUrl) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        const statusResponse = await fetch(`https://api.kie.ai/api/v1/playground/recordInfo?task_id=${taskId}`, {
+        const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/taskInfo?taskId=${taskId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
           },
         });
 
         if (statusResponse.ok) {
           const statusData = await statusResponse.json() as any;
-          if (statusData.status === "success" && statusData.output_url) {
-            imageUrl = statusData.output_url;
-            break;
-          } else if (statusData.status === "failed") {
-            throw new Error(`KIE.AI task failed: ${statusData.error || "Unknown error"}`);
+          const record = statusData.data;
+
+          if (record?.state === "success" && record?.resultJson) {
+            try {
+              const result = JSON.parse(record.resultJson);
+              imageUrl = result.resultUrls?.[0] || null;
+            } catch {
+              throw new Error("Failed to parse KIE.AI result JSON");
+            }
+            if (imageUrl) break;
+          } else if (record?.state === "fail") {
+            throw new Error(`KIE.AI task failed: ${record.failMsg || "Unknown error"}`);
           }
         }
 
@@ -127,7 +133,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!imageUrl) {
-        throw new Error("Image generation timed out or failed");
+        throw new Error("Image generation timed out or no result URL returned");
       }
 
       const imageRes = await fetch(imageUrl);
