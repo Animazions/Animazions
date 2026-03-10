@@ -171,6 +171,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const imageModels = [
     { name: 'Flux (Pollinations)', free: true },
     { name: 'Turbo (Pollinations)', free: true },
+    { name: 'Nano Banana Pro', free: true },
+    { name: 'Qwen Image', free: true },
     { name: 'DALL-E 3', free: false },
     { name: 'Midjourney', free: false },
     { name: 'Stable Diffusion XL', free: false },
@@ -186,6 +188,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const videoModels = [
     { name: 'Pollinations Video (FREE)', free: true },
     { name: 'ZeroScope v2 (FREE)', free: true },
+    { name: 'Sora 2 (FREE)', free: true },
     { name: 'Runway Gen-3', free: false },
     { name: 'Pika Labs', free: false },
     { name: 'Stable Video Diffusion', free: false },

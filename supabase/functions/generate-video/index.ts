@@ -57,6 +57,8 @@ Deno.serve(async (req: Request) => {
 
     if (model === "ZeroScope v2 (FREE)") {
       videoBuffer = await fetchVideoFromZeroScope(enhancedPrompt);
+    } else if (model === "Sora 2 (FREE)") {
+      videoBuffer = await fetchVideoFromKieAi(enhancedPrompt, duration);
     } else {
       videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
     }
@@ -298,4 +300,56 @@ async function fetchVideoFromPollinations(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function fetchVideoFromKieAi(
+  prompt: string,
+  duration: number
+): Promise<Uint8Array> {
+  const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
+  if (!kieApiKey) {
+    throw new Error("Sora 2 video generation requires KIE_AI_API_KEY configuration");
+  }
+
+  const clampedDuration = Math.max(5, Math.min(60, duration));
+
+  const response = await fetch("https://api.kie.ai/v1/videos/generations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${kieApiKey}`,
+    },
+    body: JSON.stringify({
+      prompt,
+      model: "sora-2",
+      duration: clampedDuration,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    if (response.status === 429) {
+      throw new Error("KIE.AI API rate limit exceeded. Please try again later.");
+    }
+    throw new Error(`KIE.AI video generation failed (${response.status}): ${errorData}`);
+  }
+
+  const data = await response.json() as any;
+  const videoUrl = data.data?.[0]?.url;
+
+  if (!videoUrl) {
+    throw new Error("No video URL returned from KIE.AI");
+  }
+
+  const videoRes = await fetch(videoUrl);
+  if (!videoRes.ok) {
+    throw new Error(`Failed to download video from KIE.AI: ${videoRes.status}`);
+  }
+
+  const buffer = await videoRes.arrayBuffer();
+  if (buffer.byteLength < 1000) {
+    throw new Error(`Video too small (${buffer.byteLength} bytes) — generation may have failed`);
+  }
+
+  return new Uint8Array(buffer);
 }
