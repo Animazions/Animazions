@@ -173,6 +173,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     { name: 'Turbo (Pollinations)', free: true },
     { name: 'Nano Banana Pro', free: true },
     { name: 'Qwen Image', free: true },
+    { name: 'Seedream 5.0 Lite', free: true },
     { name: 'DALL-E 3', free: false },
     { name: 'Midjourney', free: false },
     { name: 'Stable Diffusion XL', free: false },

@@ -39,6 +39,11 @@ Deno.serve(async (req: Request) => {
         throw new Error("Qwen Image requires KIE_AI_API_KEY configuration");
       }
       return await generateWithKieAi(prompt.trim(), "qwen-vl-max", kieApiKey, corsHeaders);
+    } else if (model === "Seedream 5.0 Lite") {
+      if (!kieApiKey) {
+        throw new Error("Seedream 5.0 Lite requires KIE_AI_API_KEY configuration");
+      }
+      return await generateWithKieAi(prompt.trim(), "seedream/5-lite-text-to-image", kieApiKey, corsHeaders, { quality: "basic" });
     } else {
       imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
     }
@@ -67,7 +72,8 @@ Deno.serve(async (req: Request) => {
     prompt: string,
     model: string,
     apiKey: string,
-    corsHeaders: Record<string, string>
+    corsHeaders: Record<string, string>,
+    extraInput: Record<string, string> = {}
   ): Promise<Response> {
     try {
       const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
@@ -81,6 +87,7 @@ Deno.serve(async (req: Request) => {
           input: {
             prompt: prompt,
             aspect_ratio: "1:1",
+            ...extraInput,
           },
         }),
       });
