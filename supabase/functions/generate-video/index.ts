@@ -59,6 +59,8 @@ Deno.serve(async (req: Request) => {
       videoBuffer = await fetchVideoFromZeroScope(enhancedPrompt);
     } else if (model === "Sora 2 (FREE)") {
       videoBuffer = await fetchVideoFromKieAi(enhancedPrompt, duration);
+    } else if (model === "Seedance 1.5 Pro (FREE)") {
+      videoBuffer = await fetchVideoFromSeedance(enhancedPrompt);
     } else {
       videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
     }
@@ -386,6 +388,95 @@ async function fetchVideoFromKieAi(
   const videoRes = await fetch(videoUrl);
   if (!videoRes.ok) {
     throw new Error(`Failed to download video from KIE.AI: ${videoRes.status}`);
+  }
+
+  const buffer = await videoRes.arrayBuffer();
+  if (buffer.byteLength < 1000) {
+    throw new Error(`Video too small (${buffer.byteLength} bytes) — generation may have failed`);
+  }
+
+  return new Uint8Array(buffer);
+}
+
+async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
+  const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
+  if (!kieApiKey) {
+    throw new Error("Seedance 1.5 Pro requires KIE_AI_API_KEY configuration");
+  }
+
+  const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${kieApiKey}`,
+    },
+    body: JSON.stringify({
+      model: "bytedance/seedance-1.5-pro",
+      input: {
+        prompt: prompt,
+        aspect_ratio: "16:9",
+        resolution: "720p",
+        duration: "4",
+        fixed_lens: false,
+        generate_audio: true,
+      },
+    }),
+  });
+
+  const taskData = await taskResponse.json() as any;
+
+  if (!taskResponse.ok || taskData.code !== 200) {
+    throw new Error(`Seedance API error: ${taskData.msg || JSON.stringify(taskData)}`);
+  }
+
+  const taskId = taskData.data?.taskId;
+  if (!taskId) {
+    throw new Error(`No task ID returned from Seedance. Response: ${JSON.stringify(taskData)}`);
+  }
+
+  let videoUrl: string | null = null;
+  const maxRetries = 120;
+  let retryCount = 0;
+
+  while (retryCount < maxRetries && !videoUrl) {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${kieApiKey}`,
+      },
+    });
+
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json() as any;
+      const state = statusData.data?.state;
+
+      if (state === "success") {
+        const resultJson = statusData.data?.resultJson;
+        if (resultJson) {
+          const parsed = JSON.parse(resultJson);
+          videoUrl = parsed.resultUrls?.[0] || null;
+        }
+        if (!videoUrl) {
+          throw new Error("Seedance task succeeded but no video URL found in result");
+        }
+        break;
+      } else if (state === "fail") {
+        throw new Error(`Seedance task failed: ${statusData.data?.failMsg || "Unknown error"}`);
+      }
+    }
+
+    retryCount++;
+  }
+
+  if (!videoUrl) {
+    throw new Error("Seedance video generation timed out after 10 minutes");
+  }
+
+  const videoRes = await fetch(videoUrl);
+  if (!videoRes.ok) {
+    throw new Error(`Failed to download Seedance video: ${videoRes.status}`);
   }
 
   const buffer = await videoRes.arrayBuffer();
