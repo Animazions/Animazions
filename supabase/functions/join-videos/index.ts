@@ -34,22 +34,21 @@ Deno.serve(async (req: Request) => {
     }
 
     if (videoUrls.length === 1) {
-      return new Response(
-        JSON.stringify({ downloadUrl: videoUrls[0] }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      const response = await fetch(videoUrls[0]);
+      if (!response.ok) {
+        throw new Error("Failed to fetch single video");
+      }
+      const blob = await response.blob();
+      return new Response(blob, {
+        headers: { ...corsHeaders, "Content-Type": "video/mp4" },
+      });
     }
 
-    const downloadUrl = await joinVideosWithFFmpeg(videoUrls);
+    const videoBlob = await joinVideosWithFFmpeg(videoUrls);
 
-    return new Response(
-      JSON.stringify({ downloadUrl }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(videoBlob, {
+      headers: { ...corsHeaders, "Content-Type": "video/mp4" },
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Video joining error:", errorMessage);
@@ -64,18 +63,19 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-async function joinVideosWithFFmpeg(videoUrls: string[]): Promise<string> {
+async function joinVideosWithFFmpeg(videoUrls: string[]): Promise<Blob> {
   const tmpDir = "/tmp";
-  const outputFileName = `joined_video_${Date.now()}.mp4`;
+  const timestamp = Date.now();
+  const outputFileName = `joined_video_${timestamp}.mp4`;
   const outputPath = `${tmpDir}/${outputFileName}`;
 
   try {
-    const fileListPath = `${tmpDir}/filelist_${Date.now()}.txt`;
+    const fileListPath = `${tmpDir}/filelist_${timestamp}.txt`;
 
     const downloadedFiles: string[] = [];
     for (let i = 0; i < videoUrls.length; i++) {
       const videoUrl = videoUrls[i];
-      const videoPath = `${tmpDir}/video_${i}_${Date.now()}.mp4`;
+      const videoPath = `${tmpDir}/video_${i}_${timestamp}.mp4`;
 
       const response = await fetch(videoUrl);
       if (!response.ok) {
@@ -114,14 +114,13 @@ async function joinVideosWithFFmpeg(videoUrls: string[]): Promise<string> {
     }
 
     const fileContent = await Deno.readFile(outputPath);
-    const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileContent)));
+    const blob = new Blob([fileContent], { type: "video/mp4" });
 
     await Promise.all(downloadedFiles.map(file => Deno.remove(file).catch(() => {})));
     await Deno.remove(fileListPath).catch(() => {});
     await Deno.remove(outputPath).catch(() => {});
 
-    const dataUrl = `data:video/mp4;base64,${base64Content}`;
-    return dataUrl;
+    return blob;
   } catch (error) {
     throw error;
   }

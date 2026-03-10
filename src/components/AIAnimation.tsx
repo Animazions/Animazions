@@ -526,8 +526,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
   };
 
-  const handleDragStartVideo = (index: number) => {
-    setDraggedVideoIndex(index);
+  const handleDragStartVideo = (index: number, isFromGenerated: boolean) => {
+    if (isFromGenerated) {
+      setDraggedVideoIndex(index);
+    }
   };
 
   const handleDragOverSequence = (e: React.DragEvent<HTMLDivElement>, index: number) => {
@@ -536,19 +538,24 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   };
 
   const handleDropVideo = (index: number) => {
-    if (draggedVideoIndex === null || draggedVideoIndex === index) {
+    if (draggedVideoIndex === null) {
       setDraggedVideoIndex(null);
       setDragOverIndex(null);
       return;
     }
 
-    const newSequence = [...videoSequence];
-    const draggedVideo = newSequence[draggedVideoIndex];
-    newSequence.splice(draggedVideoIndex, 1);
-    newSequence.splice(index, 0, draggedVideo);
-    setVideoSequence(newSequence);
+    const draggedVideo = generatedVideos[draggedVideoIndex];
+    addVideoToSequence(draggedVideo);
     setDraggedVideoIndex(null);
     setDragOverIndex(null);
+  };
+
+  const handleDropInEmptyEditor = () => {
+    if (draggedVideoIndex !== null) {
+      const draggedVideo = generatedVideos[draggedVideoIndex];
+      addVideoToSequence(draggedVideo);
+      setDraggedVideoIndex(null);
+    }
   };
 
   const addVideoToSequence = (videoUrl: string) => {
@@ -594,17 +601,25 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Export failed');
-
-      if (data.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = data.downloadUrl;
-        link.download = `animation_${Date.now()}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Export failed');
       }
+
+      const blob = await res.blob();
+
+      if (blob.size === 0) {
+        throw new Error('Received empty video file');
+      }
+
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `animation_${Date.now()}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (err: any) {
       setExportError(err?.message || 'Failed to export video. Please try again.');
     } finally {
@@ -1213,12 +1228,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 <div
                   key={index}
                   draggable
-                  onDragStart={() => {
-                    setDraggedVideoIndex(index);
-                  }}
-                  onDragEnd={() => {
-                    setDraggedVideoIndex(null);
-                  }}
+                  onDragStart={() => handleDragStartVideo(index, true)}
+                  onDragEnd={() => setDraggedVideoIndex(null)}
                   className="relative aspect-video bg-gray-900 border border-gray-800 rounded-lg overflow-hidden group cursor-grab active:cursor-grabbing hover:border-[#E70606] transition-colors"
                 >
                   <video
@@ -1261,12 +1272,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 onDrop={(e) => {
                   e.preventDefault();
                   e.currentTarget.classList.remove('border-[#E70606]');
-                  if (draggedVideoIndex !== null) {
-                    addVideoToSequence(generatedVideos[draggedVideoIndex]);
-                    setDraggedVideoIndex(null);
-                  }
+                  handleDropInEmptyEditor();
                 }}
-                className="border-2 border-dashed border-gray-700 rounded-lg p-12 text-center transition-colors"
+                className="border-2 border-dashed border-gray-700 rounded-lg p-12 text-center transition-colors cursor-drop"
               >
                 <Film className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <p className="text-gray-500 font-jost mb-2">
