@@ -107,14 +107,14 @@ function buildEnhancedPrompt(
   let enhancedPrompt = userPrompt;
 
   if (storyboardUrls.length > 0) {
-    enhancedPrompt += `, maintaining consistent characters and environments from the storyboard reference`;
+    enhancedPrompt += `. CRITICAL: Base the entire animation on these storyboard reference images. Every frame must feature the same characters, subjects, environments, and visual elements shown in the storyboard. Match the character designs, facial features, clothing, poses, backgrounds, and scenes exactly as depicted in the storyboard panels. The animation must flow naturally from one storyboard frame to the next, maintaining complete visual consistency throughout`;
   }
 
   if (moodboardUrls.length > 0) {
-    enhancedPrompt += `, with the visual style and mood from the provided style references`;
+    enhancedPrompt += `. Use these mood board references ONLY for color palette, lighting style, atmosphere, artistic style, and overall aesthetic. Extract the mood, tone, visual effects, and stylistic approach from the mood board, but apply them to the storyboard's characters and scenes. Do not introduce new characters or objects from the mood board—use it only as a style guide`;
   }
 
-  enhancedPrompt += `, high quality animation, cinematic, smooth motion`;
+  enhancedPrompt += `. High quality animation, cinematic, smooth motion, professional quality, seamless transitions between scenes`;
   return enhancedPrompt;
 }
 
