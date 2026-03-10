@@ -88,10 +88,10 @@ Deno.serve(async (req: Request) => {
       }
 
       const taskData = await taskResponse.json() as any;
-      const taskId = taskData.task_id;
+      const taskId = taskData.task_id || taskData.id || taskData.taskId;
 
       if (!taskId) {
-        throw new Error("No task ID returned from KIE.AI");
+        throw new Error(`No task ID returned from KIE.AI. Response: ${JSON.stringify(taskData)}`);
       }
 
       let imageUrl: string | null = null;
