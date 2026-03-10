@@ -169,10 +169,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   }, [captureFrame]);
 
   const imageModels = [
-    { name: 'Flux (Pollinations)', free: true },
-    { name: 'Turbo (Pollinations)', free: true },
     { name: 'Nano Banana Pro', free: true },
-    { name: 'Qwen Image', free: true },
     { name: 'Seedream 5.0 Lite', free: true },
     { name: 'DALL-E 3', free: false },
     { name: 'Midjourney', free: false },
