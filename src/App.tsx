@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ThirdwebProvider,
   metamaskWallet,
@@ -45,6 +45,10 @@ function AppInner() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedSaleId, setSelectedSaleId] = useState<number | undefined>(undefined);
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
 
   const handleNavigate = (page: string, id?: number | string) => {
     setCurrentPage(page);

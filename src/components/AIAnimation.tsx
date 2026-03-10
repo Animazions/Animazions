@@ -488,19 +488,24 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     return 9;
   };
 
-  const handleImageUpload = (type: 'storyboard' | 'moodboard') => {
+  const handleImageUpload = async (type: 'storyboard' | 'moodboard') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.multiple = true;
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const files = (e.target as HTMLInputElement).files;
-      if (files) {
-        const urls = Array.from(files).map(file => URL.createObjectURL(file));
+      if (files && user) {
+        const uploadedUrls: string[] = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const url = await uploadImageToStorage(URL.createObjectURL(file), type, i);
+          if (url) uploadedUrls.push(url);
+        }
         if (type === 'storyboard') {
-          setStoryboardImages(prev => [...prev, ...urls].slice(0, getStoryboardSlots()));
+          setStoryboardImages(prev => [...prev, ...uploadedUrls].slice(0, getStoryboardSlots()));
         } else {
-          setMoodboardImages(prev => [...prev, ...urls]);
+          setMoodboardImages(prev => [...prev, ...uploadedUrls]);
         }
       }
     };
