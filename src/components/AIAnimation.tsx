@@ -45,8 +45,12 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string>('');
   const [customPanels, setCustomPanels] = useState<number | null>(null);
+  const [showImageWaitMessage, setShowImageWaitMessage] = useState(false);
+  const [showVideoWaitMessage, setShowVideoWaitMessage] = useState(false);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
+  const generatedVideosSectionRef = useRef<HTMLDivElement>(null);
 
   const saveProject = useCallback(async () => {
     if (!user || !projectId) return;
@@ -277,6 +281,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
 
     setGeneratingImage(true);
+    setShowImageWaitMessage(true);
     setImageGenError('');
     setGeneratedImage(null);
 
@@ -300,6 +305,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
       if (data.imageUrl) {
         setGeneratedImage(data.imageUrl);
+        setShowImageWaitMessage(false);
+        setTimeout(() => {
+          generatedImagesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
         return;
       }
 
@@ -326,6 +335,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
           if (statusData.status === 'success' && statusData.imageUrl) {
             setGeneratedImage(statusData.imageUrl);
+            setShowImageWaitMessage(false);
+            setTimeout(() => {
+              generatedImagesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
             return;
           }
 
@@ -340,6 +353,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       throw new Error('Unexpected response from generation service.');
     } catch (err: any) {
       setImageGenError(err?.message || 'Image generation failed. Please try again.');
+      setShowImageWaitMessage(false);
     } finally {
       setGeneratingImage(false);
     }
@@ -409,6 +423,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
 
     setGeneratingVideo(true);
+    setShowVideoWaitMessage(true);
     setVideoGenError('');
 
     try {
@@ -451,11 +466,16 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       if (!res.ok || data.error) throw new Error(data.error || 'Video generation failed');
       if (data.videoUrl) {
         setGeneratedVideos(prev => [...prev, data.videoUrl]);
+        setShowVideoWaitMessage(false);
+        setTimeout(() => {
+          generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
       } else {
         throw new Error('No video URL returned from generation');
       }
     } catch (err: any) {
       setVideoGenError(err?.message || 'Video generation failed. Please try again.');
+      setShowVideoWaitMessage(false);
     } finally {
       setGeneratingVideo(false);
     }
@@ -891,8 +911,15 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             )}
           </button>
 
+          {showImageWaitMessage && (
+            <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-blue-300 text-sm font-jost">Please be patient. Generating an image can take a minute or 2.</p>
+            </div>
+          )}
+
           {generatedImage && (
-            <div className="mt-6">
+            <div ref={generatedImagesSectionRef} className="mt-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-chakra text-sm uppercase tracking-wider text-gray-400">Generated Image</p>
                 <div className="flex gap-2">
@@ -1155,11 +1182,18 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               </>
             )}
           </button>
+
+          {showVideoWaitMessage && (
+            <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-blue-300 text-sm font-jost">Please be patient. Generating a video can take a minute or 2.</p>
+            </div>
+          )}
         </section>
 
         {/* Generated Videos Display */}
         {generatedVideos.length > 0 && (
-          <section className="mb-16">
+          <section ref={generatedVideosSectionRef} className="mb-16">
             <h3 className="font-krona text-2xl mb-6">GENERATED VIDEOS</h3>
             <p className="text-gray-400 font-jost mb-6">Drag videos below into the Video Editor to add them to your sequence.</p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
