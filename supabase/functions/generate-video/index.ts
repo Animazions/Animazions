@@ -593,7 +593,7 @@ async function fetchVideoFromKling(
       "Authorization": `Bearer ${kieApiKey}`,
     },
     body: JSON.stringify({
-      model: "kling-v3-pro",
+      model: "kling-3.0/video",
       input: {
         prompt: prompt,
         aspect_ratio: "16:9",
