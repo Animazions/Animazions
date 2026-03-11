@@ -64,6 +64,14 @@ Deno.serve(async (req: Request) => {
     const enhancedPrompt = buildEnhancedPrompt(prompt, storyboardImageUrls, moodboardImageUrls, styleDescriptors, storyboardPrompts);
     const allImageUrls = [...storyboardImageUrls, ...moodboardImageUrls].filter(Boolean);
 
+    if (model === "Kling 3.0 (FREE)") {
+      const klingTaskId = await startKlingTask(enhancedPrompt, duration, storyboardImageUrls, storyboardPrompts);
+      return new Response(
+        JSON.stringify({ taskId: klingTaskId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let videoBuffer: Uint8Array;
 
     if (model === "ZeroScope v2 (FREE)") {
@@ -73,8 +81,6 @@ Deno.serve(async (req: Request) => {
     } else if (model === "Seedance 1.5 Pro (FREE)") {
       const seedancePrompt = truncatePromptForSeedance(enhancedPrompt);
       videoBuffer = await fetchVideoFromSeedance(seedancePrompt);
-    } else if (model === "Kling 3.0 (FREE)") {
-      videoBuffer = await fetchVideoFromKling(enhancedPrompt, duration, storyboardImageUrls, storyboardPrompts);
     } else {
       videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
     }
@@ -575,12 +581,12 @@ async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
-async function fetchVideoFromKling(
+async function startKlingTask(
   prompt: string,
   duration: number,
   storyboardImageUrls: string[] = [],
   storyboardPrompts: string[] = []
-): Promise<Uint8Array> {
+): Promise<string> {
   const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
   if (!kieApiKey) {
     throw new Error("Kling 3.0 requires KIE_AI_API_KEY configuration");
@@ -643,55 +649,5 @@ async function fetchVideoFromKling(
     throw new Error(`No task ID returned from Kling. Response: ${JSON.stringify(taskData)}`);
   }
 
-  let videoUrl: string | null = null;
-  const maxRetries = 120;
-  let retryCount = 0;
-
-  while (retryCount < maxRetries && !videoUrl) {
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${kieApiKey}`,
-      },
-    });
-
-    if (statusResponse.ok) {
-      const statusData = await statusResponse.json() as any;
-      const state = statusData.data?.state;
-
-      if (state === "success") {
-        const resultJson = statusData.data?.resultJson;
-        if (resultJson) {
-          const parsed = JSON.parse(resultJson);
-          videoUrl = parsed.resultUrls?.[0] || null;
-        }
-        if (!videoUrl) {
-          throw new Error("Kling task succeeded but no video URL found in result");
-        }
-        break;
-      } else if (state === "fail") {
-        throw new Error(`Kling task failed: ${statusData.data?.failMsg || "Unknown error"}`);
-      }
-    }
-
-    retryCount++;
-  }
-
-  if (!videoUrl) {
-    throw new Error("Kling video generation timed out after 10 minutes");
-  }
-
-  const videoRes = await fetch(videoUrl);
-  if (!videoRes.ok) {
-    throw new Error(`Failed to download Kling video: ${videoRes.status}`);
-  }
-
-  const buffer = await videoRes.arrayBuffer();
-  if (buffer.byteLength < 1000) {
-    throw new Error(`Video too small (${buffer.byteLength} bytes) — generation may have failed`);
-  }
-
-  return new Uint8Array(buffer);
+  return taskId;
 }

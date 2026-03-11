@@ -49,6 +49,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [customPanels, setCustomPanels] = useState<number | null>(null);
   const [showImageWaitMessage, setShowImageWaitMessage] = useState(false);
   const [showVideoWaitMessage, setShowVideoWaitMessage] = useState(false);
+  const [klingTaskId, setKlingTaskId] = useState<string | null>(null);
+  const [klingPollStatus, setKlingPollStatus] = useState<string>('');
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -426,6 +428,109 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
   };
 
+  const pollKlingTaskStatus = async (taskId: string) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Apikey': supabaseKey,
+    };
+
+    const maxAttempts = 72;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      await new Promise(r => setTimeout(r, 5000));
+      attempts++;
+
+      setKlingPollStatus(`Checking status... (attempt ${attempts}/${maxAttempts})`);
+
+      try {
+        const statusRes = await fetch(`${supabaseUrl}/functions/v1/check-video-status`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ taskId, userId: user!.id }),
+        });
+
+        const statusData = await statusRes.json();
+
+        if (statusData.status === 'success' && statusData.videoUrl) {
+          setGeneratedVideos(prev => [...prev, statusData.videoUrl]);
+          setKlingTaskId(null);
+          setKlingPollStatus('');
+          setShowVideoWaitMessage(false);
+          setGeneratingVideo(false);
+          setTimeout(() => {
+            generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+          return;
+        }
+
+        if (statusData.status === 'failed') {
+          throw new Error(statusData.error || 'Video generation failed');
+        }
+      } catch (err: any) {
+        if (err.message && err.message !== 'failed') {
+          setVideoGenError(err.message);
+          setKlingTaskId(null);
+          setKlingPollStatus('');
+          setShowVideoWaitMessage(false);
+          setGeneratingVideo(false);
+          return;
+        }
+      }
+    }
+
+    setVideoGenError('Video generation timed out. Your video may still be processing on KIE.AI — try retrieving it using your task ID: ' + taskId);
+    setKlingTaskId(taskId);
+    setKlingPollStatus('');
+    setShowVideoWaitMessage(false);
+    setGeneratingVideo(false);
+  };
+
+  const handleRetrieveKlingVideo = async (taskId: string) => {
+    if (!user) return;
+    setGeneratingVideo(true);
+    setVideoGenError('');
+    setKlingPollStatus('Retrieving video...');
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    try {
+      const statusRes = await fetch(`${supabaseUrl}/functions/v1/check-video-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Apikey': supabaseKey,
+        },
+        body: JSON.stringify({ taskId, userId: user.id }),
+      });
+
+      const statusData = await statusRes.json();
+
+      if (statusData.status === 'success' && statusData.videoUrl) {
+        setGeneratedVideos(prev => [...prev, statusData.videoUrl]);
+        setKlingTaskId(null);
+        setKlingPollStatus('');
+        setTimeout(() => {
+          generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      } else if (statusData.status === 'pending') {
+        setVideoGenError('Video is still processing. Please try again in a moment.');
+      } else {
+        throw new Error(statusData.error || 'Failed to retrieve video');
+      }
+    } catch (err: any) {
+      setVideoGenError(err?.message || 'Failed to retrieve video.');
+    } finally {
+      setGeneratingVideo(false);
+      setKlingPollStatus('');
+    }
+  };
+
   const handleGenerateVideo = async () => {
     if (!videoPrompt.trim()) {
       setVideoGenError('Please enter a video description first.');
@@ -452,6 +557,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setGeneratingVideo(true);
     setShowVideoWaitMessage(true);
     setVideoGenError('');
+    setKlingTaskId(null);
+    setKlingPollStatus('');
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -492,9 +599,18 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Video generation failed');
+
+      if (data.taskId) {
+        setKlingTaskId(data.taskId);
+        setKlingPollStatus('Video submitted to Kling AI. Waiting for result...');
+        pollKlingTaskStatus(data.taskId);
+        return;
+      }
+
       if (data.videoUrl) {
         setGeneratedVideos(prev => [...prev, data.videoUrl]);
         setShowVideoWaitMessage(false);
+        setGeneratingVideo(false);
         setTimeout(() => {
           generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -504,7 +620,6 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     } catch (err: any) {
       setVideoGenError(err?.message || 'Video generation failed. Please try again.');
       setShowVideoWaitMessage(false);
-    } finally {
       setGeneratingVideo(false);
     }
   };
@@ -1293,10 +1408,33 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             )}
           </button>
 
-          {showVideoWaitMessage && (
+          {showVideoWaitMessage && !klingTaskId && (
             <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-blue-300 text-sm font-jost">Please be patient. Generating a video can take a minute or 2.</p>
+            </div>
+          )}
+
+          {klingTaskId && (
+            <div className="mt-4 space-y-3">
+              <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Loader className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+                  <p className="text-blue-300 text-sm font-jost font-semibold">Kling AI is generating your video...</p>
+                </div>
+                {klingPollStatus && (
+                  <p className="text-blue-400 text-xs font-jost">{klingPollStatus}</p>
+                )}
+                <p className="text-gray-500 text-xs font-jost mt-2">Task ID: <span className="text-gray-400 font-mono">{klingTaskId}</span></p>
+              </div>
+              <button
+                onClick={() => handleRetrieveKlingVideo(klingTaskId)}
+                disabled={generatingVideo}
+                className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600 hover:border-[#E70606] text-white px-5 py-2 rounded-lg font-chakra text-xs uppercase tracking-wider transition-all flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Check & Retrieve Now
+              </button>
             </div>
           )}
         </section>
