@@ -55,6 +55,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [klingPolling, setKlingPolling] = useState(false);
   const [showSignUpNudge, setShowSignUpNudge] = useState(false);
   const [nudgeAuthView, setNudgeAuthView] = useState<'prompt' | 'login' | 'signup'>('prompt');
+  const [showNameProjectModal, setShowNameProjectModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [createProjectError, setCreateProjectError] = useState('');
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -218,6 +222,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setAuthSuccess('');
     setAuthLoading(true);
 
+    const fromNudge = showSignUpNudge;
+
     if (authView === 'login') {
       const { error } = await signIn(authEmail, authPassword);
       if (error) {
@@ -227,6 +233,11 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setAuthPassword('');
         setShowSignUpNudge(false);
         setNudgeAuthView('prompt');
+        if (fromNudge && !projectId) {
+          setNewProjectName('');
+          setCreateProjectError('');
+          setShowNameProjectModal(true);
+        }
       }
     } else if (authView === 'signup') {
       if (authPassword !== authConfirmPassword) {
@@ -243,14 +254,21 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       if (error) {
         setAuthError(error);
       } else {
-        setAuthSuccess('Account created! Please log in.');
-        setTimeout(() => {
-          setAuthView('login');
-          setAuthSuccess('');
-          setAuthEmail('');
-          setAuthPassword('');
-          setAuthConfirmPassword('');
-        }, 2000);
+        const emailForLogin = authEmail;
+        const passForLogin = authPassword;
+        setAuthEmail('');
+        setAuthPassword('');
+        setAuthConfirmPassword('');
+        setShowSignUpNudge(false);
+        setNudgeAuthView('prompt');
+        const { error: loginError } = await signIn(emailForLogin, passForLogin);
+        if (!loginError) {
+          setNewProjectName('');
+          setCreateProjectError('');
+          setShowNameProjectModal(true);
+        } else {
+          setAuthSuccess('Account created! You can now log in.');
+        }
       }
     } else if (authView === 'reset') {
       const { error } = await resetPassword(authEmail);
@@ -280,6 +298,31 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       setAuthError((err as Error).message);
     } finally {
       setLoggingOut(false);
+    }
+  };
+
+  const handleCreateNamedProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProjectName.trim()) {
+      setCreateProjectError('Please enter a project name');
+      return;
+    }
+    setCreatingProject(true);
+    setCreateProjectError('');
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert([{ name: newProjectName.trim(), user_id: user?.id, state: {} }])
+        .select()
+        .single();
+      if (error) throw error;
+      setShowNameProjectModal(false);
+      setNewProjectName('');
+      onNavigate('create', data.id);
+    } catch (err) {
+      setCreateProjectError((err as Error).message);
+    } finally {
+      setCreatingProject(false);
     }
   };
 
@@ -1035,6 +1078,52 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showNameProjectModal && user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.80)' }}>
+          <div className="bg-gray-950 border border-gray-700 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-[#E70606] rounded-lg flex items-center justify-center shrink-0">
+                <FolderOpen className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="font-krona text-xl text-white leading-tight">Name Your Project</h2>
+                <p className="text-gray-400 text-xs mt-0.5 font-jost">Give your animation project a name to get started</p>
+              </div>
+            </div>
+
+            {createProjectError && (
+              <div className="mb-4 p-3 bg-red-900/20 border border-red-500/50 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-300 text-xs">{createProjectError}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateNamedProject} className="space-y-4">
+              <div>
+                <label className="block text-gray-400 text-xs font-medium mb-2">Project Name</label>
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="e.g. My Anime Short Film"
+                  className="w-full px-4 py-3 bg-black border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition"
+                  autoFocus
+                  maxLength={80}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creatingProject || !newProjectName.trim()}
+                className="w-full bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-all hover:scale-105 flex items-center justify-center gap-2"
+              >
+                {creatingProject && <Loader className="w-4 h-4 animate-spin" />}
+                {creatingProject ? 'Creating...' : 'Create Project'}
+              </button>
+            </form>
           </div>
         </div>
       )}
