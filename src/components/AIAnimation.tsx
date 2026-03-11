@@ -51,6 +51,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [showVideoWaitMessage, setShowVideoWaitMessage] = useState(false);
   const [klingTaskId, setKlingTaskId] = useState<string | null>(null);
   const [klingPollStatus, setKlingPollStatus] = useState<string>('');
+  const [klingPolling, setKlingPolling] = useState(false);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -437,6 +438,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       'Apikey': supabaseKey,
     };
 
+    setKlingPolling(true);
     const maxAttempts = 72;
     let attempts = 0;
 
@@ -459,6 +461,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           setGeneratedVideos(prev => [...prev, statusData.videoUrl]);
           setKlingTaskId(null);
           setKlingPollStatus('');
+          setKlingPolling(false);
           setShowVideoWaitMessage(false);
           setGeneratingVideo(false);
           setTimeout(() => {
@@ -475,6 +478,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           setVideoGenError(err.message);
           setKlingTaskId(null);
           setKlingPollStatus('');
+          setKlingPolling(false);
           setShowVideoWaitMessage(false);
           setGeneratingVideo(false);
           return;
@@ -482,8 +486,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       }
     }
 
-    setVideoGenError('Video generation timed out. Your video may still be processing on KIE.AI — try retrieving it using your task ID: ' + taskId);
-    setKlingTaskId(taskId);
+    setVideoGenError('Video generation timed out. Your video may still be processing on KIE.AI — use the button below to retrieve it.');
+    setKlingPolling(false);
     setKlingPollStatus('');
     setShowVideoWaitMessage(false);
     setGeneratingVideo(false);
@@ -559,6 +563,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setVideoGenError('');
     setKlingTaskId(null);
     setKlingPollStatus('');
+    setKlingPolling(false);
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -1415,25 +1420,29 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </div>
           )}
 
-          {klingTaskId && (
-            <div className="mt-4 space-y-3">
-              <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Loader className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
-                  <p className="text-blue-300 text-sm font-jost font-semibold">Kling AI is generating your video...</p>
-                </div>
-                {klingPollStatus && (
-                  <p className="text-blue-400 text-xs font-jost">{klingPollStatus}</p>
-                )}
-                <p className="text-gray-500 text-xs font-jost mt-2">Task ID: <span className="text-gray-400 font-mono">{klingTaskId}</span></p>
+          {klingTaskId && klingPolling && (
+            <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+                <p className="text-blue-300 text-sm font-jost font-semibold">Kling AI is generating your video...</p>
               </div>
+              {klingPollStatus && (
+                <p className="text-blue-400 text-xs font-jost">{klingPollStatus}</p>
+              )}
+              <p className="text-gray-500 text-xs font-jost mt-2">Task ID: <span className="text-gray-400 font-mono">{klingTaskId}</span></p>
+            </div>
+          )}
+
+          {klingTaskId && !klingPolling && (
+            <div className="mt-4 space-y-3">
+              <p className="text-gray-500 text-xs font-jost">Task ID: <span className="text-gray-400 font-mono">{klingTaskId}</span></p>
               <button
                 onClick={() => handleRetrieveKlingVideo(klingTaskId)}
                 disabled={generatingVideo}
                 className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600 hover:border-[#E70606] text-white px-5 py-2 rounded-lg font-chakra text-xs uppercase tracking-wider transition-all flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
-                Check & Retrieve Now
+                Check & Retrieve Video
               </button>
             </div>
           )}

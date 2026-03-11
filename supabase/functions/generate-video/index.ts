@@ -80,7 +80,8 @@ Deno.serve(async (req: Request) => {
       videoBuffer = await fetchVideoFromKieAi(enhancedPrompt, duration);
     } else if (model === "Seedance 1.5 Pro (FREE)") {
       const seedancePrompt = truncatePromptForSeedance(enhancedPrompt);
-      videoBuffer = await fetchVideoFromSeedance(seedancePrompt);
+      const referenceImageUrl = storyboardImageUrls[0] || null;
+      videoBuffer = await fetchVideoFromSeedance(seedancePrompt, referenceImageUrl);
     } else {
       videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
     }
@@ -119,6 +120,8 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+const ANIMATION_MANDATE = "animated cartoon style, 2D or 3D animation only, NOT photorealistic, NOT live-action, NOT cinematic film, animated movie quality";
+
 function buildEnhancedPrompt(
   userPrompt: string,
   storyboardUrls: string[],
@@ -126,48 +129,28 @@ function buildEnhancedPrompt(
   styleDescriptors: string[] = [],
   storyboardPrompts: string[] = []
 ): string {
-  let enhancedPrompt = "";
-
   const styleDetails = styleDescriptors.length > 0
     ? styleDescriptors.join("; ")
-    : "professional animation style with consistent visual design";
+    : "professional 2D/3D animation style with consistent visual design";
+
+  let enhancedPrompt = `${ANIMATION_MANDATE}. ${userPrompt}. Animation style: ${styleDetails}.`;
 
   if (storyboardUrls.length > 0) {
-    enhancedPrompt = `ANIMATION VIDEO GENERATION INSTRUCTIONS:
-Generate ONLY animated video. NEVER photorealistic or live-action.
-Style: ${styleDetails}
-Content: ${userPrompt}
-
-MANDATORY STORYBOARD ADHERENCE:
-Generate video that EXACTLY matches provided storyboard images.
-- Match character designs, poses, expressions, clothing, and proportions EXACTLY
-- Reproduce backgrounds, environments, and settings IDENTICALLY
-- Use the EXACT same color palette and visual style as storyboard
-- Include all objects, props, and elements in their exact positions
-- NEVER deviate from, improvise on, or alter ANY visual element`;
-
+    enhancedPrompt += ` Animate EXACTLY from the provided storyboard images: match every character design, pose, expression, clothing, background, color palette, and composition precisely. Do not deviate from the storyboard visuals.`;
     if (storyboardPrompts.length > 0) {
-      enhancedPrompt += `\n\nStoryboard creative direction: ${storyboardPrompts.join("; ")}`;
+      enhancedPrompt += ` Creative direction: ${storyboardPrompts.join("; ")}.`;
     }
-  } else {
-    enhancedPrompt = `ANIMATION VIDEO GENERATION INSTRUCTIONS:
-Generate ONLY animated video. NEVER photorealistic or live-action.
-Style: ${styleDetails}
-Content: ${userPrompt}
-
-QUALITY REQUIREMENTS:
-- High-quality animation with cinematic production value
-- Smooth motion and seamless transitions
-- Professional polish and detail`;
   }
 
   if (moodboardUrls.length > 0) {
-    enhancedPrompt += `\n\nMOOD REFERENCE:
-Use mood images to enhance atmosphere and emotional tone only.
-Do NOT alter storyboard characters, backgrounds, or objects.`;
+    enhancedPrompt += ` Use mood reference images to guide atmosphere and emotional tone only.`;
   }
 
   return enhancedPrompt;
+}
+
+function buildAnimationShotPrompt(basePrompt: string, shotPrompt: string): string {
+  return `${ANIMATION_MANDATE}. ${shotPrompt || basePrompt}. Animated cartoon style, match storyboard image exactly.`;
 }
 
 function truncatePromptForSeedance(prompt: string): string {
@@ -492,10 +475,23 @@ async function fetchVideoFromKieAi(
   return new Uint8Array(buffer);
 }
 
-async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
+async function fetchVideoFromSeedance(prompt: string, imageUrl: string | null = null): Promise<Uint8Array> {
   const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
   if (!kieApiKey) {
     throw new Error("Seedance 1.5 Pro requires KIE_AI_API_KEY configuration");
+  }
+
+  const inputPayload: Record<string, unknown> = {
+    prompt: prompt,
+    aspect_ratio: "16:9",
+    resolution: "720p",
+    duration: "4",
+    fixed_lens: false,
+    generate_audio: true,
+  };
+
+  if (imageUrl) {
+    inputPayload.image = imageUrl;
   }
 
   const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
@@ -506,14 +502,7 @@ async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
     },
     body: JSON.stringify({
       model: "bytedance/seedance-1.5-pro",
-      input: {
-        prompt: prompt,
-        aspect_ratio: "16:9",
-        resolution: "720p",
-        duration: "4",
-        fixed_lens: false,
-        generate_audio: true,
-      },
+      input: inputPayload,
     }),
   });
 
@@ -598,14 +587,12 @@ async function startKlingTask(
   let inputPayload: Record<string, unknown>;
 
   if (hasImages) {
-    const shots = storyboardImageUrls.map((imgUrl, i) => {
-      const shotPrompt = storyboardPrompts[i] || prompt;
-      return {
-        prompt: shotPrompt,
-        duration: Math.max(3, Math.floor(Number(clampedDuration) / storyboardImageUrls.length)),
-        image_list: [{ url: imgUrl }],
-      };
-    });
+    const perShotDuration = Math.max(3, Math.floor(Number(clampedDuration) / storyboardImageUrls.length));
+    const shots = storyboardImageUrls.map((imgUrl, i) => ({
+      prompt: buildAnimationShotPrompt(prompt, storyboardPrompts[i] || prompt),
+      duration: perShotDuration,
+      image_list: [{ url: imgUrl }],
+    }));
 
     inputPayload = {
       multi_shots: true,
