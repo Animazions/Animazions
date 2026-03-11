@@ -581,7 +581,7 @@ async function fetchVideoFromKling(
 ): Promise<Uint8Array> {
   const klingApiKey = Deno.env.get("KLING_API_KEY");
   if (!klingApiKey) {
-    throw new Error("Kling 3.0 requires KLING_API_KEY configuration");
+    throw new Error("Kling 3.0 Pro requires KLING_API_KEY configuration");
   }
 
   const clampedDuration = duration >= 10 ? 10 : 5;
@@ -593,11 +593,12 @@ async function fetchVideoFromKling(
       "Authorization": `Bearer ${klingApiKey}`,
     },
     body: JSON.stringify({
-      model: "kling-v3",
+      model: "kling-v3-pro",
       prompt: prompt,
       duration: clampedDuration,
       aspect_ratio: "16:9",
-      mode: "standard",
+      mode: "pro",
+      generate_audio: true,
     }),
   });
 
