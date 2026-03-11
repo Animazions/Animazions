@@ -54,6 +54,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [klingPollStatus, setKlingPollStatus] = useState<string>('');
   const [klingPolling, setKlingPolling] = useState(false);
   const [showSignUpNudge, setShowSignUpNudge] = useState(false);
+  const [nudgeAuthView, setNudgeAuthView] = useState<'prompt' | 'login' | 'signup'>('prompt');
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -224,6 +225,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       } else {
         setAuthEmail('');
         setAuthPassword('');
+        setShowSignUpNudge(false);
+        setNudgeAuthView('prompt');
       }
     } else if (authView === 'signup') {
       if (authPassword !== authConfirmPassword) {
@@ -874,48 +877,164 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       {showSignUpNudge && !user && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
           <div className="bg-gray-950 border border-gray-700 rounded-2xl p-8 max-w-md w-full shadow-2xl">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-[#E70606] rounded-lg flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <h2 className="font-krona text-xl text-white leading-tight">Save Your Work</h2>
-            </div>
-            <p className="text-gray-300 font-jost text-sm mt-4 leading-relaxed">
-              You're creating something great! Create a free account to save your project, access it anytime, and build your portfolio of AI animations.
-            </p>
-            <div className="mt-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-4 py-3">
-              <p className="text-yellow-300 font-jost text-sm font-semibold">
-                Projects are only saved when you are registered and logged in. Without an account, your work will be lost when you leave this page.
-              </p>
-            </div>
-            <div className="mt-6 flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  setShowSignUpNudge(false);
-                  setAuthView('signup');
-                  document.querySelector<HTMLElement>('.lg\\:flex.flex-col')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-all hover:scale-105"
-              >
-                Create Free Account
-              </button>
-              <button
-                onClick={() => {
-                  setShowSignUpNudge(false);
-                  setAuthView('login');
-                  document.querySelector<HTMLElement>('.lg\\:flex.flex-col')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-colors border border-gray-700"
-              >
-                Log In
-              </button>
-              <button
-                onClick={() => setShowSignUpNudge(false)}
-                className="text-center text-xs text-gray-500 hover:text-gray-400 transition underline underline-offset-2 font-jost"
-              >
-                Not yet — continue without saving
-              </button>
-            </div>
+            {nudgeAuthView === 'prompt' ? (
+              <>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-[#E70606] rounded-lg flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="font-krona text-xl text-white leading-tight">Save Your Work</h2>
+                </div>
+                <p className="text-gray-300 font-jost text-sm mt-4 leading-relaxed">
+                  You're creating something great! Create a free account to save your project, access it anytime, and build your portfolio of AI animations.
+                </p>
+                <div className="mt-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-4 py-3">
+                  <p className="text-yellow-300 font-jost text-sm font-semibold">
+                    Projects are only saved when you are registered and logged in. Without an account, your work will be lost when you leave this page.
+                  </p>
+                </div>
+                <div className="mt-6 flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setNudgeAuthView('signup');
+                      setAuthView('signup');
+                      setAuthError('');
+                      setAuthSuccess('');
+                      setAuthEmail('');
+                      setAuthPassword('');
+                      setAuthConfirmPassword('');
+                    }}
+                    className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-all hover:scale-105"
+                  >
+                    Create Free Account
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNudgeAuthView('login');
+                      setAuthView('login');
+                      setAuthError('');
+                      setAuthSuccess('');
+                      setAuthEmail('');
+                      setAuthPassword('');
+                    }}
+                    className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-colors border border-gray-700"
+                  >
+                    Log In
+                  </button>
+                  <button
+                    onClick={() => { setShowSignUpNudge(false); setNudgeAuthView('prompt'); }}
+                    className="text-center text-xs text-gray-500 hover:text-gray-400 transition underline underline-offset-2 font-jost"
+                  >
+                    Not yet — continue without saving
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-[#E70606] rounded-lg flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                    <h2 className="font-krona text-lg text-white leading-tight">
+                      {nudgeAuthView === 'signup' ? 'Create Account' : 'Log In'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setNudgeAuthView('prompt')}
+                    className="text-gray-500 hover:text-gray-300 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {authError && (
+                  <div className="mb-3 p-2.5 bg-red-900/20 border border-red-500/50 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-red-300 text-xs">{authError}</p>
+                  </div>
+                )}
+                {authSuccess && (
+                  <div className="mb-3 p-2.5 bg-green-900/20 border border-green-500/50 rounded-lg">
+                    <p className="text-green-300 text-xs">{authSuccess}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleAuthSubmit} className="space-y-3">
+                  <div>
+                    <label className="block text-gray-400 text-xs font-medium mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full px-3 py-2.5 bg-black border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-xs font-medium mb-1">Password</label>
+                    <input
+                      type="password"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2.5 bg-black border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition"
+                      required
+                    />
+                    {nudgeAuthView === 'signup' && (
+                      <p className="text-xs text-gray-600 mt-1">Minimum 8 characters</p>
+                    )}
+                  </div>
+                  {nudgeAuthView === 'signup' && (
+                    <div>
+                      <label className="block text-gray-400 text-xs font-medium mb-1">Confirm Password</label>
+                      <input
+                        type="password"
+                        value={authConfirmPassword}
+                        onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-2.5 bg-black border border-gray-700 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#E70606] transition"
+                        required
+                      />
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 text-white font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition flex items-center justify-center gap-2 mt-1"
+                  >
+                    {authLoading && <Loader className="w-4 h-4 animate-spin" />}
+                    {nudgeAuthView === 'login' ? (authLoading ? 'Logging in...' : 'Log In') : (authLoading ? 'Creating...' : 'Create Account')}
+                  </button>
+                </form>
+
+                <div className="mt-4 text-center">
+                  {nudgeAuthView === 'login' ? (
+                    <button
+                      onClick={() => { setNudgeAuthView('signup'); setAuthView('signup'); setAuthError(''); setAuthSuccess(''); }}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition"
+                    >
+                      Don't have an account? Sign up
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setNudgeAuthView('login'); setAuthView('login'); setAuthError(''); setAuthSuccess(''); }}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition"
+                    >
+                      Already have an account? Log in
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => { setShowSignUpNudge(false); setNudgeAuthView('prompt'); }}
+                  className="mt-4 text-center text-xs text-gray-600 hover:text-gray-400 transition underline underline-offset-2 font-jost w-full"
+                >
+                  Not yet — continue without saving
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

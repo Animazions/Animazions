@@ -119,6 +119,8 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
       const { error } = await signOut();
       if (error) {
         setError(error);
+      } else {
+        if (onNavigate) onNavigate('create');
       }
     } catch (err) {
       setError((err as Error).message);
