@@ -71,7 +71,8 @@ Deno.serve(async (req: Request) => {
     } else if (model === "Sora 2 (FREE)") {
       videoBuffer = await fetchVideoFromKieAi(enhancedPrompt, duration);
     } else if (model === "Seedance 1.5 Pro (FREE)") {
-      videoBuffer = await fetchVideoFromSeedance(enhancedPrompt);
+      const seedancePrompt = truncatePromptForSeedance(enhancedPrompt);
+      videoBuffer = await fetchVideoFromSeedance(seedancePrompt);
     } else {
       videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
     }
@@ -165,6 +166,17 @@ QUALITY REQUIREMENTS:
 - Consistent frame quality throughout`;
 
   return enhancedPrompt;
+}
+
+function truncatePromptForSeedance(prompt: string): string {
+  const maxLength = 500;
+  if (prompt.length <= maxLength) {
+    return prompt;
+  }
+
+  const truncated = prompt.substring(0, maxLength).trim();
+  const lastSpace = truncated.lastIndexOf(' ');
+  return lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated;
 }
 
 async function extractImageStyles(imageUrls: string[]): Promise<string[]> {
