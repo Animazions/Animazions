@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { prompt, model } = await req.json();
+    const { prompt, model, imageAnalysis } = await req.json();
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return new Response(
@@ -27,7 +27,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const trimmedPrompt = prompt.trim();
+    let enhancedPrompt = prompt;
+    if (imageAnalysis && imageAnalysis.fullDescription) {
+      enhancedPrompt = `${prompt}
+
+REFERENCE IMAGE STYLE CHARACTERISTICS:
+Art Style: ${imageAnalysis.artStyle}
+Color Palette: ${imageAnalysis.colorPalette}
+Characters: ${imageAnalysis.characters}
+Backgrounds: ${imageAnalysis.backgrounds}
+Composition: ${imageAnalysis.composition}
+Lighting: ${imageAnalysis.lighting}
+Mood: ${imageAnalysis.mood}
+
+CRITICAL: Generate an image that EXACTLY matches these visual characteristics. Replicate the art style, colors, character designs, backgrounds, and overall aesthetic precisely.`;
+    }
+
+    const trimmedPrompt = enhancedPrompt.trim();
     const encodedPrompt = encodeURIComponent(trimmedPrompt);
 
     if (model === "Flux (Pollinations)" || model === "Turbo (Pollinations)" || !KIE_MODEL_MAP[model]) {

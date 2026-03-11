@@ -298,11 +298,30 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         'Apikey': supabaseKey,
       };
 
+      let imageAnalysis = null;
+
+      if (imagePrompt.toLowerCase().includes('panel') || imagePrompt.toLowerCase().includes('image') || imagePrompt.toLowerCase().includes('same style') || imagePrompt.toLowerCase().includes('like')) {
+        if (storyboardImages.length > 0) {
+          try {
+            const analysisRes = await fetch(`${supabaseUrl}/functions/v1/analyze-image-style`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ imageUrl: storyboardImages[0] }),
+            });
+            if (analysisRes.ok) {
+              imageAnalysis = await analysisRes.json();
+            }
+          } catch (err) {
+            console.warn('Image analysis failed, continuing without it:', err);
+          }
+        }
+      }
+
       const enhancedPrompt = enhancePromptWithAnimationStyle(imagePrompt);
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ prompt: enhancedPrompt, model: selectedImageModel }),
+        body: JSON.stringify({ prompt: enhancedPrompt, model: selectedImageModel, imageAnalysis }),
       });
 
       const data = await res.json();

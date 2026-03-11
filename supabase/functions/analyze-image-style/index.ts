@@ -7,7 +7,18 @@ const corsHeaders = {
 };
 
 interface AnalysisRequest {
-  imageUrls: string[];
+  imageUrl: string;
+}
+
+interface ImageAnalysis {
+  artStyle: string;
+  colorPalette: string;
+  characters: string;
+  backgrounds: string;
+  composition: string;
+  lighting: string;
+  mood: string;
+  fullDescription: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -17,19 +28,19 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: AnalysisRequest = await req.json();
-    const { imageUrls = [] } = body;
+    const { imageUrl } = body;
 
-    if (!imageUrls || imageUrls.length === 0) {
+    if (!imageUrl || typeof imageUrl !== "string") {
       return new Response(
-        JSON.stringify({ error: "No images to analyze" }),
+        JSON.stringify({ error: "Valid imageUrl is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const styleDescriptors = await analyzeImages(imageUrls);
+    const analysis = await analyzeImageStyle(imageUrl);
 
     return new Response(
-      JSON.stringify({ styleDescriptors }),
+      JSON.stringify(analysis),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -42,54 +53,89 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-async function analyzeImages(imageUrls: string[]): Promise<string[]> {
-  const descriptors: string[] = [];
-
-  for (const url of imageUrls.slice(0, 3)) {
-    try {
-      const descriptor = await analyzeImageWithClipApi(url);
-      if (descriptor) {
-        descriptors.push(descriptor);
-      }
-    } catch (err) {
-      console.warn(`Failed to analyze image ${url}:`, err);
-    }
-  }
-
-  if (descriptors.length === 0) {
-    descriptors.push("professional animation style with consistent character design and color palette");
-  }
-
-  return descriptors;
-}
-
-async function analyzeImageWithClipApi(imageUrl: string): Promise<string | null> {
+async function analyzeImageStyle(imageUrl: string): Promise<ImageAnalysis> {
   try {
-    const descriptor = extractStyleFromUrl(imageUrl);
+    const imageData = await fetchImageAsBase64(imageUrl);
 
-    if (descriptor) {
-      return descriptor;
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") || "",
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/jpeg",
+                  data: imageData,
+                },
+              },
+              {
+                type: "text",
+                text: `Analyze this image in detail and provide a comprehensive style analysis. Return ONLY valid JSON (no markdown, no code blocks) with exactly these fields:
+{
+  "artStyle": "specific art style, technique, and visual approach",
+  "colorPalette": "dominant colors, color scheme, and color grading",
+  "characters": "character designs, facial features, clothing, proportions, expressions",
+  "backgrounds": "environment, setting, background elements, composition",
+  "composition": "layout, positioning, spatial relationships, framing",
+  "lighting": "lighting style, shadows, highlights, atmosphere",
+  "mood": "overall mood, tone, and emotional atmosphere",
+  "fullDescription": "comprehensive description combining all elements for image generation"
+}
+
+Be specific and detailed. Focus on exact visual characteristics that should be replicated.`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Claude API error:", errorText);
+      return getDefaultAnalysis();
     }
 
-    return "professional animation style, smooth motion, polished";
-  } catch {
-    return extractStyleFromUrl(imageUrl);
+    const data = await response.json();
+    const analysisText = data.content[0].text;
+
+    const analysis = JSON.parse(analysisText) as ImageAnalysis;
+    return analysis;
+  } catch (err) {
+    console.warn("Image analysis failed, returning default:", err);
+    return getDefaultAnalysis();
   }
 }
 
-function extractStyleFromUrl(url: string): string {
-  if (url.includes("anime") || url.includes("japan")) {
-    return "Japanese anime style, cel-shading, expressive characters";
+async function fetchImageAsBase64(imageUrl: string): Promise<string> {
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.statusText}`);
   }
-  if (url.includes("realistic")) {
-    return "photorealistic, cinematic, detailed";
-  }
-  if (url.includes("cartoon")) {
-    return "cartoon style, vibrant colors, stylized";
-  }
-  if (url.includes("3d")) {
-    return "3D rendered, polished, modern";
-  }
+  const buffer = await response.arrayBuffer();
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
 
-  return "professional animation style, smooth motion, polished";
+function getDefaultAnalysis(): ImageAnalysis {
+  return {
+    artStyle: "professional animation style",
+    colorPalette: "vibrant and balanced colors",
+    characters: "well-proportioned characters with expressive features",
+    backgrounds: "detailed and consistent backgrounds",
+    composition: "balanced composition with clear focal points",
+    lighting: "professional lighting with clear shadows and highlights",
+    mood: "polished and professional",
+    fullDescription: "Professional animation style with vibrant colors, well-proportioned characters, detailed backgrounds, and polished lighting",
+  };
 }
