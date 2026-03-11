@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
       const seedancePrompt = truncatePromptForSeedance(enhancedPrompt);
       videoBuffer = await fetchVideoFromSeedance(seedancePrompt);
     } else if (model === "Kling 3.0 (FREE)") {
-      videoBuffer = await fetchVideoFromKling(enhancedPrompt, duration);
+      videoBuffer = await fetchVideoFromKling(enhancedPrompt, duration, storyboardImageUrls, storyboardPrompts);
     } else {
       videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
     }
@@ -577,7 +577,9 @@ async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
 
 async function fetchVideoFromKling(
   prompt: string,
-  duration: number
+  duration: number,
+  storyboardImageUrls: string[] = [],
+  storyboardPrompts: string[] = []
 ): Promise<Uint8Array> {
   const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
   if (!kieApiKey) {
@@ -585,6 +587,38 @@ async function fetchVideoFromKling(
   }
 
   const clampedDuration = duration >= 10 ? "10" : "5";
+  const hasImages = storyboardImageUrls.length > 0;
+
+  let inputPayload: Record<string, unknown>;
+
+  if (hasImages) {
+    const shots = storyboardImageUrls.map((imgUrl, i) => {
+      const shotPrompt = storyboardPrompts[i] || prompt;
+      return {
+        prompt: shotPrompt,
+        duration: Math.max(3, Math.floor(Number(clampedDuration) / storyboardImageUrls.length)),
+        image_list: [{ url: imgUrl }],
+      };
+    });
+
+    inputPayload = {
+      multi_shots: true,
+      multi_prompt: shots,
+      aspect_ratio: "16:9",
+      duration: clampedDuration,
+      mode: "pro",
+      sound: true,
+    };
+  } else {
+    inputPayload = {
+      multi_shots: false,
+      prompt: prompt,
+      aspect_ratio: "16:9",
+      duration: clampedDuration,
+      mode: "pro",
+      sound: true,
+    };
+  }
 
   const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
     method: "POST",
@@ -594,13 +628,7 @@ async function fetchVideoFromKling(
     },
     body: JSON.stringify({
       model: "kling-3.0/video",
-      input: {
-        prompt: prompt,
-        aspect_ratio: "16:9",
-        duration: clampedDuration,
-        mode: "pro",
-        generate_audio: true,
-      },
+      input: inputPayload,
     }),
   });
 
