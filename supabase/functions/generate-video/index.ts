@@ -575,85 +575,42 @@ async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
-async function generateKlingJWT(accessKey: string, secretKey: string): Promise<string> {
-  const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: accessKey,
-    exp: now + 1800,
-    nbf: now - 5,
-  };
-
-  const encode = (obj: object) =>
-    btoa(JSON.stringify(obj))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-  const headerB64 = encode(header);
-  const payloadB64 = encode(payload);
-  const signingInput = `${headerB64}.${payloadB64}`;
-
-  const keyData = new TextEncoder().encode(secretKey);
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(signingInput)
-  );
-
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-
-  return `${signingInput}.${sigB64}`;
-}
-
 async function fetchVideoFromKling(
   prompt: string,
   duration: number
 ): Promise<Uint8Array> {
-  const accessKey = Deno.env.get("KLING_ACCESS_KEY") || Deno.env.get("KLING_API_KEY");
-  const secretKey = Deno.env.get("KLING_SECRET_KEY");
-
-  if (!accessKey || !secretKey) {
-    throw new Error("Kling 3.0 Pro requires both KLING_ACCESS_KEY and KLING_SECRET_KEY configuration");
+  const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
+  if (!kieApiKey) {
+    throw new Error("Kling 3.0 requires KIE_AI_API_KEY configuration");
   }
 
-  const jwt = await generateKlingJWT(accessKey, secretKey);
-  const clampedDuration = duration >= 10 ? 10 : 5;
+  const clampedDuration = duration >= 10 ? "10" : "5";
 
-  const taskResponse = await fetch("https://api.klingai.com/v1/videos/text2video", {
+  const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${jwt}`,
+      "Authorization": `Bearer ${kieApiKey}`,
     },
     body: JSON.stringify({
       model: "kling-v3-pro",
-      prompt: prompt,
-      duration: clampedDuration,
-      aspect_ratio: "16:9",
-      mode: "pro",
-      generate_audio: true,
+      input: {
+        prompt: prompt,
+        aspect_ratio: "16:9",
+        duration: clampedDuration,
+        mode: "pro",
+        generate_audio: true,
+      },
     }),
   });
 
   const taskData = await taskResponse.json() as any;
 
-  if (!taskResponse.ok) {
-    throw new Error(`Kling API error: ${taskData.message || JSON.stringify(taskData)}`);
+  if (!taskResponse.ok || taskData.code !== 200) {
+    throw new Error(`Kling API error: ${taskData.msg || JSON.stringify(taskData)}`);
   }
 
-  const taskId = taskData.data?.task_id;
+  const taskId = taskData.data?.taskId;
   if (!taskId) {
     throw new Error(`No task ID returned from Kling. Response: ${JSON.stringify(taskData)}`);
   }
@@ -665,28 +622,29 @@ async function fetchVideoFromKling(
   while (retryCount < maxRetries && !videoUrl) {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
-    const statusResponse = await fetch(
-      `https://api.klingai.com/v1/videos/${taskId}`,
-      {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${klingApiKey}`,
-        },
-      }
-    );
+    const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${kieApiKey}`,
+      },
+    });
 
     if (statusResponse.ok) {
       const statusData = await statusResponse.json() as any;
       const state = statusData.data?.state;
 
       if (state === "success") {
-        videoUrl = statusData.data?.video_url || null;
+        const resultJson = statusData.data?.resultJson;
+        if (resultJson) {
+          const parsed = JSON.parse(resultJson);
+          videoUrl = parsed.resultUrls?.[0] || null;
+        }
         if (!videoUrl) {
           throw new Error("Kling task succeeded but no video URL found in result");
         }
         break;
-      } else if (state === "failed") {
-        throw new Error(`Kling task failed: ${statusData.data?.error || "Unknown error"}`);
+      } else if (state === "fail") {
+        throw new Error(`Kling task failed: ${statusData.data?.failMsg || "Unknown error"}`);
       }
     }
 
