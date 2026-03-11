@@ -222,7 +222,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setAuthSuccess('');
     setAuthLoading(true);
 
-    const fromNudge = showSignUpNudge;
+    const hasUnsavedWork = !projectId && (
+      storyboardImages.length > 0 || !!imagePrompt || !!videoPrompt || generatedVideos.length > 0
+    );
 
     if (authView === 'login') {
       const { error } = await signIn(authEmail, authPassword);
@@ -233,7 +235,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setAuthPassword('');
         setShowSignUpNudge(false);
         setNudgeAuthView('prompt');
-        if (fromNudge && !projectId) {
+        if (hasUnsavedWork) {
           setNewProjectName('');
           setCreateProjectError('');
           setShowNameProjectModal(true);
@@ -303,16 +305,43 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
   const handleCreateNamedProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProjectName.trim()) {
+    const trimmedName = newProjectName.trim();
+    if (!trimmedName) {
       setCreateProjectError('Please enter a project name');
       return;
     }
     setCreatingProject(true);
     setCreateProjectError('');
     try {
+      const { data: existing } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('user_id', user?.id)
+        .ilike('name', trimmedName)
+        .maybeSingle();
+
+      if (existing) {
+        setCreateProjectError(`You already have a project named "${trimmedName}". Please choose a different name.`);
+        setCreatingProject(false);
+        return;
+      }
+
+      const currentState = projectId ? {} : {
+        selectedImageModel,
+        selectedVideoModel,
+        imagePrompt,
+        videoPrompt,
+        clipDuration,
+        storyboardImages,
+        storyboardImagePrompts,
+        moodboardImages,
+        generatedVideos,
+        videoSequence,
+      };
+
       const { data, error } = await supabase
         .from('projects')
-        .insert([{ name: newProjectName.trim(), user_id: user?.id, state: {} }])
+        .insert([{ name: trimmedName, user_id: user?.id, state: currentState }])
         .select()
         .single();
       if (error) throw error;
@@ -1153,6 +1182,15 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                   <FolderOpen className="w-4 h-4" />
                   My Projects
                 </button>
+                {!projectId && (storyboardImages.length > 0 || imagePrompt || videoPrompt || generatedVideos.length > 0) && (
+                  <button
+                    onClick={() => { setNewProjectName(''); setCreateProjectError(''); setShowNameProjectModal(true); }}
+                    className="w-full bg-[#E70606] hover:bg-[#c00505] px-6 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center justify-center gap-2"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    Save My Work
+                  </button>
+                )}
               </div>
               {saveError && (
                 <div className="p-3 bg-red-900/20 border border-red-500 rounded-lg flex items-start gap-2">
