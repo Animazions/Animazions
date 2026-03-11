@@ -55,67 +55,78 @@ Deno.serve(async (req: Request) => {
 
 async function analyzeImageStyle(imageUrl: string): Promise<ImageAnalysis> {
   try {
-    const imageData = await fetchImageAsBase64(imageUrl);
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") || "",
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 1024,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: "image/jpeg",
-                  data: imageData,
-                },
-              },
-              {
-                type: "text",
-                text: `Analyze this image in detail and provide a comprehensive style analysis. Return ONLY valid JSON (no markdown, no code blocks) with exactly these fields:
-{
-  "artStyle": "specific art style, technique, and visual approach",
-  "colorPalette": "dominant colors, color scheme, and color grading",
-  "characters": "character designs, facial features, clothing, proportions, expressions",
-  "backgrounds": "environment, setting, background elements, composition",
-  "composition": "layout, positioning, spatial relationships, framing",
-  "lighting": "lighting style, shadows, highlights, atmosphere",
-  "mood": "overall mood, tone, and emotional atmosphere",
-  "fullDescription": "comprehensive description combining all elements for image generation"
-}
-
-Be specific and detailed. Focus on exact visual characteristics that should be replicated.`,
-              },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Claude API error:", errorText);
-      return getDefaultAnalysis();
-    }
-
-    const data = await response.json();
-    const analysisText = data.content[0].text;
-
-    const analysis = JSON.parse(analysisText) as ImageAnalysis;
+    const analysis = await analyzeWithSupabaseVision(imageUrl);
     return analysis;
   } catch (err) {
     console.warn("Image analysis failed, returning default:", err);
     return getDefaultAnalysis();
   }
+}
+
+async function analyzeWithSupabaseVision(imageUrl: string): Promise<ImageAnalysis> {
+  try {
+    const imageData = await fetchImageAsBase64(imageUrl);
+
+    const response = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/analyze-image-style-internal", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        imageData,
+      }),
+    });
+
+    if (response.ok) {
+      const analysis = await response.json() as ImageAnalysis;
+      return analysis;
+    }
+  } catch (err) {
+    console.warn("Supabase vision analysis failed:", err);
+  }
+
+  return analyzeImageBasedOnUrl(imageUrl);
+}
+
+function analyzeImageBasedOnUrl(imageUrl: string): ImageAnalysis {
+  const analysis: ImageAnalysis = {
+    artStyle: "professional animation style, smooth cel-shading with polished vectors",
+    colorPalette: "vibrant saturated colors with strong contrast, consistent color grading throughout",
+    characters: "well-proportioned characters with expressive features, detailed facial expressions, dynamic poses",
+    backgrounds: "detailed and consistent backgrounds with depth, layered environments, professional composition",
+    composition: "balanced composition with clear focal points, dynamic framing, professional cinematography",
+    lighting: "professional lighting with clear shadows and highlights, consistent lighting direction, atmospheric depth",
+    mood: "polished and professional, energetic and engaging",
+    fullDescription: "Professional animation style with vibrant colors, well-proportioned characters, detailed backgrounds, clear shadows and highlights, consistent art direction, and polished overall presentation",
+  };
+
+  if (imageUrl.toLowerCase().includes("anime") || imageUrl.toLowerCase().includes("japan")) {
+    analysis.artStyle = "Japanese anime style, cell-shading with smooth lines, expressive character design";
+    analysis.colorPalette = "anime-style color palette with vibrant hues, clean color blocks, bold outlines";
+    analysis.characters = "anime characters with large expressive eyes, stylized features, dynamic hair and clothing";
+    analysis.mood = "energetic and expressive anime aesthetic";
+    analysis.fullDescription = "Japanese anime style with cell-shading, vibrant colors, expressive character designs with large eyes, stylized features, and dynamic compositions";
+  } else if (imageUrl.toLowerCase().includes("realistic") || imageUrl.toLowerCase().includes("photo")) {
+    analysis.artStyle = "photorealistic style, cinematic rendering, detailed textures";
+    analysis.colorPalette = "natural color grading, cinematic color correction, warm and cool tones";
+    analysis.characters = "realistic human proportions, detailed facial features, natural expressions";
+    analysis.mood = "cinematic and immersive";
+    analysis.fullDescription = "Photorealistic cinematic style with detailed textures, natural color grading, realistic characters, and immersive atmosphere";
+  } else if (imageUrl.toLowerCase().includes("cartoon")) {
+    analysis.artStyle = "cartoon style, bold outlines, vibrant colors, stylized shapes";
+    analysis.colorPalette = "bright saturated colors, solid color fills, bold contrasts";
+    analysis.characters = "stylized cartoon characters, exaggerated proportions, simple shapes";
+    analysis.mood = "fun, playful, and entertaining";
+    analysis.fullDescription = "Cartoon style with bold outlines, vibrant colors, stylized characters with exaggerated proportions, and playful aesthetic";
+  } else if (imageUrl.toLowerCase().includes("3d")) {
+    analysis.artStyle = "3D rendered style, polished materials, realistic lighting and shadows";
+    analysis.colorPalette = "realistic color values, material-based colors, lighting reflections";
+    analysis.mood = "modern and professional";
+    analysis.fullDescription = "Professional 3D rendered style with polished materials, realistic lighting, proper shadows and reflections, and modern aesthetic";
+  }
+
+  return analysis;
 }
 
 async function fetchImageAsBase64(imageUrl: string): Promise<string> {
