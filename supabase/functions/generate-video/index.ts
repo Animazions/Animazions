@@ -575,22 +575,67 @@ async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
+async function generateKlingJWT(accessKey: string, secretKey: string): Promise<string> {
+  const header = { alg: "HS256", typ: "JWT" };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: accessKey,
+    exp: now + 1800,
+    nbf: now - 5,
+  };
+
+  const encode = (obj: object) =>
+    btoa(JSON.stringify(obj))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+  const headerB64 = encode(header);
+  const payloadB64 = encode(payload);
+  const signingInput = `${headerB64}.${payloadB64}`;
+
+  const keyData = new TextEncoder().encode(secretKey);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    new TextEncoder().encode(signingInput)
+  );
+
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  return `${signingInput}.${sigB64}`;
+}
+
 async function fetchVideoFromKling(
   prompt: string,
   duration: number
 ): Promise<Uint8Array> {
-  const klingApiKey = Deno.env.get("KLING_API_KEY");
-  if (!klingApiKey) {
-    throw new Error("Kling 3.0 Pro requires KLING_API_KEY configuration");
+  const accessKey = Deno.env.get("KLING_ACCESS_KEY") || Deno.env.get("KLING_API_KEY");
+  const secretKey = Deno.env.get("KLING_SECRET_KEY");
+
+  if (!accessKey || !secretKey) {
+    throw new Error("Kling 3.0 Pro requires both KLING_ACCESS_KEY and KLING_SECRET_KEY configuration");
   }
 
+  const jwt = await generateKlingJWT(accessKey, secretKey);
   const clampedDuration = duration >= 10 ? 10 : 5;
 
   const taskResponse = await fetch("https://api.klingai.com/v1/videos/text2video", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${klingApiKey}`,
+      "Authorization": `Bearer ${jwt}`,
     },
     body: JSON.stringify({
       model: "kling-v3-pro",
