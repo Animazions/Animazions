@@ -52,6 +52,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [klingTaskId, setKlingTaskId] = useState<string | null>(null);
   const [klingPollStatus, setKlingPollStatus] = useState<string>('');
   const [klingPolling, setKlingPolling] = useState(false);
+  const [showSignUpNudge, setShowSignUpNudge] = useState(false);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -334,6 +335,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       if (data.imageUrl) {
         setGeneratedImage(data.imageUrl);
         setShowImageWaitMessage(false);
+        if (!user) setShowSignUpNudge(true);
         setTimeout(() => {
           generatedImagesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -366,6 +368,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           if (statusData.status === 'success' && statusData.imageUrl) {
             setGeneratedImage(statusData.imageUrl);
             setShowImageWaitMessage(false);
+            if (!user) setShowSignUpNudge(true);
             setTimeout(() => {
               generatedImagesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
@@ -391,6 +394,17 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
   const uploadImageToStorage = async (imageUrl: string, folder: string, index: number): Promise<string | null> => {
     try {
+      if (!imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
+        return imageUrl;
+      }
+
+      if (!user) {
+        if (imageUrl.startsWith('blob:')) {
+          return imageUrl;
+        }
+        return imageUrl;
+      }
+
       let blob: Blob;
 
       if (imageUrl.startsWith('data:')) {
@@ -403,15 +417,13 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           byteArray[i] = byteString.charCodeAt(i);
         }
         blob = new Blob([byteArray], { type: mimeType });
-      } else if (imageUrl.startsWith('blob:')) {
+      } else {
         const response = await fetch(imageUrl);
         blob = await response.blob();
-      } else {
-        return imageUrl;
       }
 
       const ext = blob.type.split('/')[1]?.split('+')[0] || 'jpg';
-      const fileName = `${user!.id}/${folder}_${Date.now()}_${index}.${ext}`;
+      const fileName = `${user.id}/${folder}_${Date.now()}_${index}.${ext}`;
 
       const { error } = await supabase.storage
         .from('reference-images')
@@ -510,7 +522,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           'Authorization': `Bearer ${supabaseKey}`,
           'Apikey': supabaseKey,
         },
-        body: JSON.stringify({ taskId, userId: user.id }),
+        body: JSON.stringify({ taskId, userId: user?.id ?? null }),
       });
 
       const statusData = await statusRes.json();
@@ -519,6 +531,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setGeneratedVideos(prev => [...prev, statusData.videoUrl]);
         setKlingTaskId(null);
         setKlingPollStatus('');
+        if (!user) setShowSignUpNudge(true);
         setTimeout(() => {
           generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -554,8 +567,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       return;
     }
     if (!user) {
-      setVideoGenError('You must be logged in to generate videos.');
-      return;
+      setShowSignUpNudge(true);
     }
 
     setGeneratingVideo(true);
@@ -598,7 +610,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           moodboardImageUrls: validMoodboardUrls,
           storyboardPrompts: storyboardImagePrompts,
           duration: clipDuration,
-          userId: user.id,
+          userId: user?.id ?? null,
         }),
       });
 
@@ -616,6 +628,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setGeneratedVideos(prev => [...prev, data.videoUrl]);
         setShowVideoWaitMessage(false);
         setGeneratingVideo(false);
+        if (!user) setShowSignUpNudge(true);
         setTimeout(() => {
           generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -643,7 +656,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     input.multiple = true;
     input.onchange = async (e) => {
       const files = (e.target as HTMLInputElement).files;
-      if (files && user) {
+      if (files && files.length > 0) {
         const uploadedUrls: string[] = [];
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
@@ -651,9 +664,18 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           if (url) uploadedUrls.push(url);
         }
         if (type === 'storyboard') {
-          setStoryboardImages(prev => [...prev, ...uploadedUrls].slice(0, getStoryboardSlots()));
+          setStoryboardImages(prev => {
+            const combined = [...prev, ...uploadedUrls];
+            if (combined.length > getStoryboardSlots()) {
+              setCustomPanels(combined.length);
+            }
+            return combined;
+          });
         } else {
           setMoodboardImages(prev => [...prev, ...uploadedUrls]);
+        }
+        if (!user) {
+          setShowSignUpNudge(true);
         }
       }
     };
@@ -833,6 +855,56 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
   return (
     <div className="min-h-screen bg-black text-white pt-24 pb-20">
+
+      {showSignUpNudge && !user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
+          <div className="bg-gray-950 border border-gray-700 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-[#E70606] rounded-lg flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="font-krona text-xl text-white leading-tight">Save Your Work</h2>
+            </div>
+            <p className="text-gray-300 font-jost text-sm mt-4 leading-relaxed">
+              You're creating something great! Create a free account to save your project, access it anytime, and build your portfolio of AI animations.
+            </p>
+            <div className="mt-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-4 py-3">
+              <p className="text-yellow-300 font-jost text-sm font-semibold">
+                Projects are only saved when you are registered and logged in. Without an account, your work will be lost when you leave this page.
+              </p>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowSignUpNudge(false);
+                  setAuthView('signup');
+                  document.querySelector<HTMLElement>('.lg\\:flex.flex-col')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-all hover:scale-105"
+              >
+                Create Free Account
+              </button>
+              <button
+                onClick={() => {
+                  setShowSignUpNudge(false);
+                  setAuthView('login');
+                  document.querySelector<HTMLElement>('.lg\\:flex.flex-col')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-colors border border-gray-700"
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => setShowSignUpNudge(false)}
+                className="text-center text-xs text-gray-500 hover:text-gray-400 transition underline underline-offset-2 font-jost"
+              >
+                Not yet — continue without saving
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-8 max-w-[1440px] mx-auto px-6 md:px-12 lg:px-24">
 
         {/* Left Sidebar */}
