@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, FolderOpen, CreditCard, BookOpen, Play, Pause, AlertCircle, Loader, ChevronLeft, ChevronUp, ChevronDown, Download, Maximize } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { enhancePromptWithAnimationStyle } from '../utils/animationStyles';
 
 interface AIAnimationProps {
   onNavigate: (page: string, projectId?: string) => void;
@@ -297,10 +298,11 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         'Apikey': supabaseKey,
       };
 
+      const enhancedPrompt = enhancePromptWithAnimationStyle(imagePrompt);
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ prompt: imagePrompt, model: selectedImageModel }),
+        body: JSON.stringify({ prompt: enhancedPrompt, model: selectedImageModel }),
       });
 
       const data = await res.json();
