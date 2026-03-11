@@ -49,6 +49,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [customPanels, setCustomPanels] = useState<number | null>(null);
   const [showImageWaitMessage, setShowImageWaitMessage] = useState(false);
   const [showVideoWaitMessage, setShowVideoWaitMessage] = useState(false);
+  const [referenceImageIndex, setReferenceImageIndex] = useState<number | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -299,10 +300,18 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       };
 
       const enhancedPrompt = enhancePromptWithAnimationStyle(imagePrompt);
+      const referenceImage = referenceImageIndex !== null && storyboardImages[referenceImageIndex] ? storyboardImages[referenceImageIndex] : null;
+      const referencePrompt = referenceImageIndex !== null && storyboardImagePrompts[referenceImageIndex] ? storyboardImagePrompts[referenceImageIndex] : null;
+
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ prompt: enhancedPrompt, model: selectedImageModel }),
+        body: JSON.stringify({
+          prompt: enhancedPrompt,
+          model: selectedImageModel,
+          referenceImageUrl: referenceImage,
+          referenceImagePrompt: referencePrompt,
+        }),
       });
 
       const data = await res.json();
@@ -936,12 +945,50 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
           <div className="mt-6">
             <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400 mb-2">
+              Select Reference Image (Optional)
+            </label>
+            <p className="text-xs font-jost text-gray-500 mb-3">Choose a storyboard image to match its exact style, characters, colors, and visual characteristics</p>
+            {storyboardImages.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
+                <button
+                  onClick={() => setReferenceImageIndex(null)}
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                    referenceImageIndex === null
+                      ? 'border-[#E70606] scale-105'
+                      : 'border-gray-700 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="aspect-square bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                    <span className="font-chakra text-xs uppercase text-gray-400">None</span>
+                  </div>
+                </button>
+                {storyboardImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setReferenceImageIndex(idx)}
+                    className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                      referenceImageIndex === idx
+                        ? 'border-[#E70606] scale-105'
+                        : 'border-gray-700 hover:border-gray-600'
+                    }`}
+                  >
+                    <img src={img} alt={`Reference ${idx}`} className="w-full h-full object-cover aspect-square" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs font-jost text-gray-500 mb-6">Upload or generate images first to use as reference</p>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400 mb-2">
               Describe Your Image
             </label>
             <textarea
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
-              placeholder="Describe the image you want to generate... (e.g., 'A futuristic cityscape at sunset with flying cars and neon lights')"
+              placeholder={referenceImageIndex !== null ? "Describe what you want, matching the selected reference image's style, characters, colors, and characteristics..." : "Describe the image you want to generate... (e.g., 'A futuristic cityscape at sunset with flying cars and neon lights')"}
               className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white placeholder:text-gray-600 focus:outline-none focus:border-[#E70606] transition-colors resize-none h-32"
             />
           </div>

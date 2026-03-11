@@ -12,13 +12,32 @@ const KIE_MODEL_MAP: Record<string, string> = {
   "Seedream 5.0 Lite": "seedream/5-lite-text-to-image",
 };
 
+function buildPromptWithReference(userPrompt: string, referencePrompt: string): string {
+  return `${userPrompt}
+
+CRITICAL REFERENCE IMAGE REQUIREMENTS:
+This image was originally created using: "${referencePrompt}"
+
+You MUST generate an image that EXACTLY matches the reference image provided.
+NON-NEGOTIABLE REQUIREMENTS:
+- EXACT character designs: Match every character's appearance, facial features, body proportions, clothing, and accessories EXACTLY
+- EXACT colors: Use the EXACT same color palette, color scheme, and color grading as the reference
+- EXACT art style: Reproduce the EXACT artistic style, technique, and aesthetic
+- EXACT backgrounds: Match backgrounds, environments, and settings IDENTICALLY
+- EXACT composition: Maintain the EXACT layout, positioning, and spatial relationships
+- EXACT props and objects: Include the EXACT same objects, props, and items in EXACT positions
+
+DO NOT deviate from, improvise on, or alter ANY visual element from the reference image.
+Every detail must authentically reflect the reference image's exact characteristics.`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const { prompt, model } = await req.json();
+    const { prompt, model, referenceImageUrl, referenceImagePrompt } = await req.json();
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return new Response(
@@ -27,12 +46,22 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const trimmedPrompt = prompt.trim();
+    let enhancedPrompt = prompt;
+    if (referenceImageUrl && referenceImagePrompt) {
+      enhancedPrompt = buildPromptWithReference(prompt, referenceImagePrompt);
+    } else if (referenceImageUrl) {
+      enhancedPrompt = `${prompt}. Match the EXACT style, characters, colors, and visual characteristics of the provided reference image.`;
+    }
+
+    const trimmedPrompt = enhancedPrompt.trim();
     const encodedPrompt = encodeURIComponent(trimmedPrompt);
 
     if (model === "Flux (Pollinations)" || model === "Turbo (Pollinations)" || !KIE_MODEL_MAP[model]) {
       const pollinationsModel = model === "Turbo (Pollinations)" ? "turbo" : "flux";
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${pollinationsModel}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      let imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${pollinationsModel}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      if (referenceImageUrl) {
+        imageUrl += `&image=${encodeURIComponent(referenceImageUrl)}`;
+      }
       return new Response(
         JSON.stringify({ imageUrl }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
