@@ -196,7 +196,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
   const videoModels = [
     { name: 'Seedance 1.5 Pro (FREE)', free: true },
-    { name: 'Kling 3.0 (FREE)', free: true },
+    { name: 'Kling 3.0', free: false },
     { name: 'Runway Gen-3', free: false },
     { name: 'Pika Labs', free: false },
     { name: 'Stable Video Diffusion', free: false },
@@ -1359,7 +1359,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             <div className="flex gap-3">
               {[5, 10, 15].map((duration) => {
                 const isSeedance = selectedVideoModel === 'Seedance 1.5 Pro (FREE)';
-                const isKling = selectedVideoModel === 'Kling 3.0 (FREE)';
+                const isKling = selectedVideoModel === 'Kling 3.0';
                 const isDisabled = (isSeedance && (duration === 10 || duration === 15)) || (isKling && duration === 15);
                 return (
                   <button
@@ -1383,7 +1383,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             {selectedVideoModel === 'Seedance 1.5 Pro (FREE)' && (
               <p className="text-xs text-gray-500 mt-2">Seedance 1.5 Pro only supports 5 second videos</p>
             )}
-            {selectedVideoModel === 'Kling 3.0 (FREE)' && (
+            {selectedVideoModel === 'Kling 3.0' && (
               <p className="text-xs text-gray-500 mt-2">Kling 3.0 supports up to 10 second videos</p>
             )}
           </div>

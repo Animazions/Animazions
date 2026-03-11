@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
     const enhancedPrompt = buildEnhancedPrompt(prompt, storyboardImageUrls, moodboardImageUrls, styleDescriptors, storyboardPrompts);
     const allImageUrls = [...storyboardImageUrls, ...moodboardImageUrls].filter(Boolean);
 
-    if (model === "Kling 3.0 (FREE)") {
+    if (model === "Kling 3.0") {
       const klingTaskId = await startKlingTask(enhancedPrompt, duration, storyboardImageUrls, storyboardPrompts);
       return new Response(
         JSON.stringify({ taskId: klingTaskId }),
