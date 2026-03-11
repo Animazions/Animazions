@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Play, Loader } from 'lucide-react';
+import { Plus, Trash2, Play, Loader, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,7 +16,7 @@ interface MyProjectsProps {
 }
 
 export function MyProjects({ onNavigate }: MyProjectsProps) {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [newProjectName, setNewProjectName] = useState('');
@@ -116,6 +116,22 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
     <div className="min-h-screen bg-black text-white pt-24">
       <section className="py-12 px-6 md:px-12 lg:px-24">
         <div className="max-w-[1440px] mx-auto">
+          {user && (
+            <div className="mb-8 flex items-center justify-between p-4 bg-gray-900 border border-gray-700 rounded-lg">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Logged in as</p>
+                <p className="text-sm font-semibold text-white">{user.email}</p>
+              </div>
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-2 text-sm font-chakra uppercase tracking-wider text-gray-500 hover:text-red-400 transition px-4 py-2 rounded-lg hover:bg-gray-800 border border-transparent hover:border-red-500/30"
+              >
+                <LogOut className="w-4 h-4" />
+                Log Out
+              </button>
+            </div>
+          )}
+
           <div className="mb-12">
             <h1 className="font-krona text-4xl md:text-5xl lg:text-6xl mb-4">
               My <span className="text-[#E70606]">Projects</span>
