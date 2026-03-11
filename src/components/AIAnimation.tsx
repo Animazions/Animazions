@@ -20,6 +20,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [selectedImageModel, setSelectedImageModel] = useState('');
   const [selectedVideoModel, setSelectedVideoModel] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
@@ -263,6 +264,20 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
 
     setAuthLoading(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      const { error } = await signOut();
+      if (error) {
+        setAuthError(error);
+      }
+    } catch (err) {
+      setAuthError((err as Error).message);
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const switchAuthView = (view: AuthView) => {
@@ -915,10 +930,11 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 <p className="text-xs text-gray-400 mb-1">Logged in as</p>
                 <p className="text-sm font-semibold truncate">{user.email}</p>
                 <button
-                  onClick={() => signOut()}
-                  className="mt-3 text-xs text-gray-500 hover:text-red-400 transition underline underline-offset-2"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="mt-3 text-xs text-gray-500 hover:text-red-400 disabled:text-gray-600 disabled:cursor-not-allowed transition underline underline-offset-2"
                 >
-                  Log out
+                  {loggingOut ? 'Logging out...' : 'Log out'}
                 </button>
               </div>
               <div className="space-y-3">

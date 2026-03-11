@@ -22,6 +22,7 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
   const [error, setError] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -112,6 +113,20 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
     });
   };
 
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      const { error } = await signOut();
+      if (error) {
+        setError(error);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pt-24">
       <section className="py-12 px-6 md:px-12 lg:px-24">
@@ -123,11 +138,16 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
                 <p className="text-sm font-semibold text-white">{user.email}</p>
               </div>
               <button
-                onClick={() => signOut()}
-                className="flex items-center gap-2 text-sm font-chakra uppercase tracking-wider text-gray-500 hover:text-red-400 transition px-4 py-2 rounded-lg hover:bg-gray-800 border border-transparent hover:border-red-500/30"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="flex items-center gap-2 text-sm font-chakra uppercase tracking-wider text-gray-500 hover:text-red-400 disabled:text-gray-600 disabled:cursor-not-allowed transition px-4 py-2 rounded-lg hover:bg-gray-800 disabled:hover:bg-transparent border border-transparent hover:border-red-500/30 disabled:border-transparent"
               >
-                <LogOut className="w-4 h-4" />
-                Log Out
+                {loggingOut ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
+                {loggingOut ? 'Logging out...' : 'Log Out'}
               </button>
             </div>
           )}
