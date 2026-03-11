@@ -73,6 +73,8 @@ Deno.serve(async (req: Request) => {
     } else if (model === "Seedance 1.5 Pro (FREE)") {
       const seedancePrompt = truncatePromptForSeedance(enhancedPrompt);
       videoBuffer = await fetchVideoFromSeedance(seedancePrompt);
+    } else if (model === "Kling 3.0 (FREE)") {
+      videoBuffer = await fetchVideoFromKling(enhancedPrompt, duration);
     } else {
       videoBuffer = await fetchVideoFromPollinations(enhancedPrompt, duration, allImageUrls);
     }
@@ -563,6 +565,95 @@ async function fetchVideoFromSeedance(prompt: string): Promise<Uint8Array> {
   const videoRes = await fetch(videoUrl);
   if (!videoRes.ok) {
     throw new Error(`Failed to download Seedance video: ${videoRes.status}`);
+  }
+
+  const buffer = await videoRes.arrayBuffer();
+  if (buffer.byteLength < 1000) {
+    throw new Error(`Video too small (${buffer.byteLength} bytes) — generation may have failed`);
+  }
+
+  return new Uint8Array(buffer);
+}
+
+async function fetchVideoFromKling(
+  prompt: string,
+  duration: number
+): Promise<Uint8Array> {
+  const klingApiKey = Deno.env.get("KLING_API_KEY");
+  if (!klingApiKey) {
+    throw new Error("Kling 3.0 requires KLING_API_KEY configuration");
+  }
+
+  const clampedDuration = duration >= 10 ? 10 : 5;
+
+  const taskResponse = await fetch("https://api.klingai.com/v1/videos/text2video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${klingApiKey}`,
+    },
+    body: JSON.stringify({
+      model: "kling-v3",
+      prompt: prompt,
+      duration: clampedDuration,
+      aspect_ratio: "16:9",
+      mode: "standard",
+    }),
+  });
+
+  const taskData = await taskResponse.json() as any;
+
+  if (!taskResponse.ok) {
+    throw new Error(`Kling API error: ${taskData.message || JSON.stringify(taskData)}`);
+  }
+
+  const taskId = taskData.data?.task_id;
+  if (!taskId) {
+    throw new Error(`No task ID returned from Kling. Response: ${JSON.stringify(taskData)}`);
+  }
+
+  let videoUrl: string | null = null;
+  const maxRetries = 120;
+  let retryCount = 0;
+
+  while (retryCount < maxRetries && !videoUrl) {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    const statusResponse = await fetch(
+      `https://api.klingai.com/v1/videos/${taskId}`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${klingApiKey}`,
+        },
+      }
+    );
+
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json() as any;
+      const state = statusData.data?.state;
+
+      if (state === "success") {
+        videoUrl = statusData.data?.video_url || null;
+        if (!videoUrl) {
+          throw new Error("Kling task succeeded but no video URL found in result");
+        }
+        break;
+      } else if (state === "failed") {
+        throw new Error(`Kling task failed: ${statusData.data?.error || "Unknown error"}`);
+      }
+    }
+
+    retryCount++;
+  }
+
+  if (!videoUrl) {
+    throw new Error("Kling video generation timed out after 10 minutes");
+  }
+
+  const videoRes = await fetch(videoUrl);
+  if (!videoRes.ok) {
+    throw new Error(`Failed to download Kling video: ${videoRes.status}`);
   }
 
   const buffer = await videoRes.arrayBuffer();

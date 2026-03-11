@@ -193,6 +193,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
   const videoModels = [
     { name: 'Seedance 1.5 Pro (FREE)', free: true },
+    { name: 'Kling 3.0 (FREE)', free: true },
     { name: 'Runway Gen-3', free: false },
     { name: 'Pika Labs', free: false },
     { name: 'Stable Video Diffusion', free: false },
@@ -1238,7 +1239,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             <div className="flex gap-3">
               {[5, 10, 15].map((duration) => {
                 const isSeedance = selectedVideoModel === 'Seedance 1.5 Pro (FREE)';
-                const isDisabled = isSeedance && (duration === 10 || duration === 15);
+                const isKling = selectedVideoModel === 'Kling 3.0 (FREE)';
+                const isDisabled = (isSeedance && (duration === 10 || duration === 15)) || (isKling && duration === 15);
                 return (
                   <button
                     key={duration}
@@ -1251,7 +1253,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                         ? 'bg-[#E70606] text-white'
                         : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#E70606]'
                     }`}
-                    title={isDisabled ? 'Seedance 1.5 Pro only supports 5s duration' : ''}
+                    title={isDisabled ? (isSeedance ? 'Seedance 1.5 Pro only supports 5s duration' : 'Kling 3.0 supports up to 10s duration') : ''}
                   >
                     {duration}s
                   </button>
@@ -1260,6 +1262,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </div>
             {selectedVideoModel === 'Seedance 1.5 Pro (FREE)' && (
               <p className="text-xs text-gray-500 mt-2">Seedance 1.5 Pro only supports 5 second videos</p>
+            )}
+            {selectedVideoModel === 'Kling 3.0 (FREE)' && (
+              <p className="text-xs text-gray-500 mt-2">Kling 3.0 supports up to 10 second videos</p>
             )}
           </div>
 
