@@ -56,9 +56,11 @@ async function analyzeImages(imageUrls: string[]): Promise<string[]> {
     }
   }
 
-  return descriptors.length > 0
-    ? descriptors
-    : ["high quality animation, professional style"];
+  if (descriptors.length === 0) {
+    descriptors.push("professional animation style with consistent character design and color palette");
+  }
+
+  return descriptors;
 }
 
 async function analyzeImageWithClipApi(imageUrl: string): Promise<string | null> {

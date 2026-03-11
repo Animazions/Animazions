@@ -121,21 +121,49 @@ function buildEnhancedPrompt(
 
   const styleDetails = styleDescriptors.length > 0
     ? styleDescriptors.join("; ")
-    : "professional animation style";
+    : "professional animation style with consistent visual design";
 
   const originalImageContext = storyboardPrompts.length > 0
-    ? `These storyboard images were originally created using the following creative briefs: ${storyboardPrompts.join("; ")}. `
+    ? `Original storyboard creative briefs: ${storyboardPrompts.join("; ")}. `
     : "";
 
   if (storyboardUrls.length > 0) {
-    enhancedPrompt += `. CRITICAL STYLE INSTRUCTIONS: ${originalImageContext}The animation MUST match the exact visual style, art direction, and aesthetic shown in the provided storyboard images. ${styleDetails}. Maintain consistent character designs, clothing, facial features, poses, backgrounds, and environments exactly as they appear in the storyboard. Do not deviate from the established visual style, color palette, or artistic direction. Every frame must authentically reflect the storyboard's creative vision`;
+    enhancedPrompt += `
+
+MANDATORY STORYBOARD ADHERENCE REQUIREMENTS:
+${originalImageContext}
+You MUST generate video that EXACTLY matches the storyboard images provided. This is NON-NEGOTIABLE.
+
+VISUAL CONSISTENCY REQUIREMENTS:
+- EXACT character designs: Match every character's appearance, facial features, body proportions, clothing, and accessories EXACTLY as shown in storyboard
+- EXACT backgrounds: Reproduce every background, environment, setting, and location IDENTICALLY to storyboard
+- EXACT colors: Use the EXACT same color palette, color scheme, and color grading as the storyboard
+- EXACT animation style: ${styleDetails}
+- EXACT poses and positioning: Match character poses, positions, and spatial relationships EXACTLY
+- EXACT props and objects: Include the EXACT same objects, props, and items in EXACT positions
+
+DO NOT deviate from, improvise on, or alter ANY visual element from the storyboard.
+Every frame MUST authentically reflect the storyboard's exact creative vision.
+Maintain 100% visual consistency with storyboard images throughout the entire video.`;
   }
 
   if (moodboardUrls.length > 0) {
-    enhancedPrompt += `. Use mood board images ONLY to reinforce and enhance the established visual style from the storyboard. Extract and apply the atmosphere, lighting, color grading, and emotional tone from the mood board while keeping all characters, objects, and environments from the storyboard unchanged`;
+    enhancedPrompt += `
+
+MOOD BOARD USAGE (SECONDARY):
+Use mood board images ONLY to enhance atmosphere, lighting, and emotional tone.
+CRITICAL: Do NOT alter characters, backgrounds, or objects from the storyboard.
+Apply mood board atmosphere while maintaining ALL storyboard visual elements unchanged.`;
   }
 
-  enhancedPrompt += `. Deliver high-quality animation with cinematic production value, smooth motion, seamless transitions, and professional polish`;
+  enhancedPrompt += `
+
+QUALITY REQUIREMENTS:
+- High-quality animation with cinematic production value
+- Smooth motion and seamless transitions
+- Professional polish and detail
+- Consistent frame quality throughout`;
+
   return enhancedPrompt;
 }
 
