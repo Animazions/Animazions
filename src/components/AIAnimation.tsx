@@ -1236,20 +1236,31 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               Video Duration
             </label>
             <div className="flex gap-3">
-              {[5, 10, 15].map((duration) => (
-                <button
-                  key={duration}
-                  onClick={() => setClipDuration(duration as 5 | 10 | 15)}
-                  className={`px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all ${
-                    clipDuration === duration
-                      ? 'bg-[#E70606] text-white'
-                      : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#E70606]'
-                  }`}
-                >
-                  {duration}s
-                </button>
-              ))}
+              {[5, 10, 15].map((duration) => {
+                const isSeedance = selectedVideoModel === 'Seedance 1.5 Pro (FREE)';
+                const isDisabled = isSeedance && (duration === 10 || duration === 15);
+                return (
+                  <button
+                    key={duration}
+                    onClick={() => !isDisabled && setClipDuration(duration as 5 | 10 | 15)}
+                    disabled={isDisabled}
+                    className={`px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all ${
+                      isDisabled
+                        ? 'bg-gray-900 text-gray-600 border border-gray-700 cursor-not-allowed opacity-50'
+                        : clipDuration === duration
+                        ? 'bg-[#E70606] text-white'
+                        : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#E70606]'
+                    }`}
+                    title={isDisabled ? 'Seedance 1.5 Pro only supports 5s duration' : ''}
+                  >
+                    {duration}s
+                  </button>
+                );
+              })}
             </div>
+            {selectedVideoModel === 'Seedance 1.5 Pro (FREE)' && (
+              <p className="text-xs text-gray-500 mt-2">Seedance 1.5 Pro only supports 5 second videos</p>
+            )}
           </div>
 
           {videoGenError && (
