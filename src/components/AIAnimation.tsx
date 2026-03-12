@@ -793,26 +793,23 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
   };
 
-  const parsePanelPrompts = (rawPrompt: string, numPanels: number): string[] => {
-    const panelMap: Record<number, string> = {};
-    const regex = /(?:panel|image|img)\s*#?\s*(\d+)\s*[:\-]\s*([\s\S]*?)(?=(?:panel|image|img)\s*#?\s*\d+\s*[:\-]|$)/gi;
-    let match;
-    while ((match = regex.exec(rawPrompt)) !== null) {
-      const num = parseInt(match[1], 10);
-      const promptText = match[2].trim().replace(/,\s*$/, '').trim();
-      if (num >= 1 && promptText) {
-        panelMap[num] = promptText;
+  const parsePanelPrompts = (rawPrompt: string): { panelIndex: number; prompt: string }[] => {
+    const results: { panelIndex: number; prompt: string }[] = [];
+    const lines = rawPrompt.split('\n').map(l => l.trim()).filter(Boolean);
+    const panelLineRegex = /^(?:panel|image|img)\s*#?\s*(\d+)\s*[:\-]\s*(.+)/i;
+    for (const line of lines) {
+      const match = line.match(panelLineRegex);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        const promptText = match[2].trim();
+        if (num >= 1 && promptText) {
+          results.push({ panelIndex: num - 1, prompt: promptText });
+        }
       }
     }
-    const hasPanelPrompts = Object.keys(panelMap).length > 0;
-    if (!hasPanelPrompts) {
-      return Array(numPanels).fill(rawPrompt);
-    }
-    return Array.from({ length: numPanels }, (_, i) => {
-      const panelNum = i + 1;
-      return panelMap[panelNum] || rawPrompt;
-    });
+    return results;
   };
+
 
   const handleGenerateVideo = async () => {
     if (!videoPrompt.trim()) {
@@ -862,10 +859,29 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         Promise.all(moodboardUploadPromises),
       ]);
 
-      const validStoryboardUrls = storyboardPublicUrls.filter(Boolean) as string[];
+      const allStoryboardUrls = storyboardPublicUrls.filter(Boolean) as string[];
       const validMoodboardUrls = moodboardPublicUrls.filter(Boolean) as string[];
 
-      const perPanelPrompts = parsePanelPrompts(videoPrompt, validStoryboardUrls.length);
+      const panelEntries = parsePanelPrompts(videoPrompt);
+      const hasPanelRefs = panelEntries.length > 0;
+
+      let finalStoryboardUrls: string[];
+      let finalStoryboardPrompts: string[];
+
+      if (hasPanelRefs) {
+        const validEntries = panelEntries.filter(e => e.panelIndex < allStoryboardUrls.length && allStoryboardUrls[e.panelIndex]);
+        if (validEntries.length === 0) {
+          setVideoGenError('The panel numbers you referenced do not match any storyboard images. Please check your panel numbers.');
+          setGeneratingVideo(false);
+          setShowVideoWaitMessage(false);
+          return;
+        }
+        finalStoryboardUrls = validEntries.map(e => allStoryboardUrls[e.panelIndex]);
+        finalStoryboardPrompts = validEntries.map(e => e.prompt);
+      } else {
+        finalStoryboardUrls = allStoryboardUrls;
+        finalStoryboardPrompts = allStoryboardUrls.map(() => videoPrompt);
+      }
 
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video`, {
         method: 'POST',
@@ -877,9 +893,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         body: JSON.stringify({
           prompt: videoPrompt,
           model: selectedVideoModel,
-          storyboardImageUrls: validStoryboardUrls,
+          storyboardImageUrls: finalStoryboardUrls,
           moodboardImageUrls: validMoodboardUrls,
-          storyboardPrompts: perPanelPrompts,
+          storyboardPrompts: finalStoryboardPrompts,
           duration: selectedVideoModel === 'Seedance 1.5 Pro (FREE)' ? 4 : clipDuration,
           userId: user?.id ?? null,
           projectId: projectId ?? null,
@@ -1944,41 +1960,52 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               Describe Your Video
             </label>
             <p className="font-jost text-xs text-gray-500 mb-3 leading-relaxed">
-              The AI Video model animates one image/panel at a time. You can write a single prompt for all panels, or target individual panels by number.
-              For example: <span className="text-gray-400 font-medium">"Panel 1: slow zoom in on the hero, Panel 2: the city erupts in flames, Panel 3: wide aerial shot"</span>.
-              Any panel without a specific prompt will use the general description. Tutorials are in the <span className="text-[#E70606] font-medium">'Guides and Tutorials'</span> page.
+              The AI Video model animates one image/panel at a time. Reference each panel by number on its own line — only the panels you mention will be generated.
+              Each line should follow the format: <span className="text-gray-400 font-medium">Panel 1: slow zoom on the hero</span> or <span className="text-gray-400 font-medium">Image 2: dramatic explosion</span>.
+              If no panel numbers are mentioned, the prompt applies to all storyboard images. Tutorials are in the <span className="text-[#E70606] font-medium">'Guides and Tutorials'</span> page.
             </p>
             <textarea
               value={videoPrompt}
               onChange={(e) => setVideoPrompt(e.target.value)}
-              placeholder={storyboardImages.length > 1 ? `Describe each panel's animation (e.g. "Panel 1: slow zoom on character, Panel 2: city erupts in flames, Panel 3: hero runs left") — or write one description for all panels.` : "Describe the video animation you want to generate... (e.g., 'Smooth camera pan across a cyberpunk city with animated characters walking')"}
+              placeholder={storyboardImages.length > 1 ? `Reference specific panels on separate lines, e.g.\nPanel 1: slow zoom on the hero\nPanel 3: city erupts in flames\n\nUnreferenced panels will not be generated.` : "Describe the video animation you want to generate... (e.g., 'Smooth camera pan across a cyberpunk city with animated characters walking')"}
               className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white placeholder:text-gray-600 focus:outline-none focus:border-[#E70606] transition-colors resize-none h-36"
             />
-            {storyboardImages.length > 1 && videoPrompt.trim() && (() => {
-              const parsed = parsePanelPrompts(videoPrompt, storyboardImages.length);
-              const hasCustom = parsed.some((p, i) => i > 0 && p !== parsed[0]);
-              if (!hasCustom) return null;
+            {videoPrompt.trim() && (() => {
+              const panelEntries = parsePanelPrompts(videoPrompt);
+              if (panelEntries.length === 0) return null;
               return (
                 <div className="mt-3 bg-gray-900 border border-gray-700 rounded-lg p-4">
-                  <p className="font-chakra text-xs uppercase tracking-wider text-gray-400 mb-3">Panel Prompts Preview</p>
-                  <div className="space-y-2">
-                    {parsed.map((panelPrompt, i) => (
-                      <div key={i} className="flex gap-3 items-start">
-                        <div className="flex-shrink-0 w-16 h-10 rounded overflow-hidden border border-gray-700">
-                          {storyboardImages[i] ? (
-                            <img src={storyboardImages[i]} alt={`Panel ${i + 1}`} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                              <span className="font-krona text-gray-600 text-xs">{i + 1}</span>
+                  <p className="font-chakra text-xs uppercase tracking-wider text-gray-400 mb-3">
+                    Panel Prompts Preview — {panelEntries.length} panel{panelEntries.length > 1 ? 's' : ''} will be generated
+                  </p>
+                  <div className="space-y-3">
+                    {panelEntries.map(({ panelIndex, prompt: panelPrompt }) => {
+                      const panelNum = panelIndex + 1;
+                      const hasImage = !!storyboardImages[panelIndex];
+                      const outOfRange = panelIndex >= storyboardImages.length;
+                      return (
+                        <div key={panelIndex} className={`flex gap-3 items-start p-2 rounded-lg ${outOfRange ? 'border border-red-800 bg-red-900/10' : 'border border-gray-800'}`}>
+                          <div className="flex-shrink-0 w-16 h-12 rounded overflow-hidden border border-gray-700">
+                            {hasImage ? (
+                              <img src={storyboardImages[panelIndex]} alt={`Panel ${panelNum}`} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                <span className="font-krona text-gray-500 text-xs">{panelNum}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className={`font-chakra text-xs ${outOfRange ? 'text-red-400' : 'text-[#E70606]'}`}>Panel {panelNum}</p>
+                              {outOfRange && (
+                                <span className="text-xs text-red-400 font-jost">(no storyboard image — will be skipped)</span>
+                              )}
                             </div>
-                          )}
+                            <p className="font-jost text-xs text-gray-300 leading-relaxed">{panelPrompt}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-chakra text-xs text-[#E70606] mb-0.5">Panel {i + 1}</p>
-                          <p className="font-jost text-xs text-gray-300 leading-relaxed truncate">{panelPrompt}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
