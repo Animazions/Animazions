@@ -1,81 +1,58 @@
 import { useState, useRef } from 'react';
 import { X, Download, Loader, Film, XCircle } from 'lucide-react';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { supabase } from '../lib/supabase';
 
 interface VideoExportModalProps {
   videoSequence: string[];
   onClose: () => void;
 }
 
-type OutputFormat = 'mp4' | 'avi' | 'mov' | 'webm' | 'mkv';
-
-interface FormatOption {
-  value: OutputFormat;
-  label: string;
-  mimeType: string;
-  codec: string[];
-  description: string;
-}
-
-const FORMAT_OPTIONS: FormatOption[] = [
-  {
-    value: 'mp4',
-    label: 'MP4',
-    mimeType: 'video/mp4',
-    codec: ['-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-movflags', '+faststart'],
-    description: 'Best compatibility, recommended',
-  },
-  {
-    value: 'webm',
-    label: 'WebM',
-    mimeType: 'video/webm',
-    codec: ['-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0'],
-    description: 'Open format, good for web',
-  },
-  {
-    value: 'mov',
-    label: 'MOV',
-    mimeType: 'video/quicktime',
-    codec: ['-c:v', 'libx264', '-preset', 'fast', '-crf', '23'],
-    description: 'Apple QuickTime format',
-  },
-  {
-    value: 'avi',
-    label: 'AVI',
-    mimeType: 'video/x-msvideo',
-    codec: ['-c:v', 'libx264', '-preset', 'fast'],
-    description: 'Classic Windows format',
-  },
-  {
-    value: 'mkv',
-    label: 'MKV',
-    mimeType: 'video/x-matroska',
-    codec: ['-c:v', 'libx264', '-preset', 'fast', '-crf', '23'],
-    description: 'Open container, great quality',
-  },
-];
-
 export default function VideoExportModal({ videoSequence, onClose }: VideoExportModalProps) {
-  const [selectedFormat, setSelectedFormat] = useState<OutputFormat>('mp4');
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [cancelled, setCancelled] = useState(false);
-  const ffmpegRef = useRef<FFmpeg | null>(null);
   const cancelledRef = useRef(false);
 
   const handleCancel = () => {
     cancelledRef.current = true;
     setCancelled(true);
-    if (ffmpegRef.current) {
-      try { ffmpegRef.current.terminate(); } catch { /* ignore */ }
-      ffmpegRef.current = null;
-    }
     setExporting(false);
     setStatus('');
     setProgress(0);
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const fetchVideoBlob = async (url: string, index: number): Promise<Blob> => {
+    const isSupabaseStorage = url.includes('/storage/v1/object/sign/') || url.includes('/storage/v1/object/public/');
+
+    if (isSupabaseStorage) {
+      const pathMatch = url.match(/\/storage\/v1\/object\/(?:sign|public)\/generated-videos\/(.+?)(?:\?|$)/);
+      if (pathMatch) {
+        const filePath = decodeURIComponent(pathMatch[1]);
+        const { data, error: dlError } = await supabase.storage
+          .from('generated-videos')
+          .download(filePath);
+        if (dlError) throw new Error(`Failed to download video ${index + 1}: ${dlError.message}`);
+        if (!data) throw new Error(`No data for video ${index + 1}`);
+        return data;
+      }
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch video ${index + 1}: ${res.status} ${res.statusText}`);
+    return res.blob();
   };
 
   const handleExport = async () => {
@@ -84,85 +61,53 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
     setExporting(true);
     setError('');
     setProgress(0);
-    setStatus('Loading FFmpeg...');
 
     try {
-      const ffmpeg = new FFmpeg();
-      ffmpegRef.current = ffmpeg;
+      if (videoSequence.length === 1) {
+        setStatus('Downloading video...');
+        setProgress(20);
+        const blob = await fetchVideoBlob(videoSequence[0], 0);
+        if (cancelledRef.current) return;
+        setProgress(90);
+        setStatus('Preparing download...');
+        downloadBlob(blob, `animation_${Date.now()}.mp4`);
+        setProgress(100);
+        setStatus('Done!');
+        setTimeout(() => onClose(), 1200);
+        return;
+      }
 
-      ffmpeg.on('progress', ({ progress: p }) => {
-        if (!cancelledRef.current) setProgress(Math.round(p * 100));
-      });
-
-      ffmpeg.on('log', ({ message }) => {
-        if (!cancelledRef.current && (message.includes('frame=') || message.includes('time='))) {
-          setStatus('Encoding...');
-        }
-      });
-
-      await ffmpeg.load({
-        coreURL: await toBlobURL(
-          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-          'text/javascript'
-        ),
-        wasmURL: await toBlobURL(
-          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-          'application/wasm'
-        ),
-      });
-
-      if (cancelledRef.current) return;
-
-      setStatus('Downloading videos...');
-
-      const inputFiles: string[] = [];
+      const blobs: Blob[] = [];
       for (let i = 0; i < videoSequence.length; i++) {
         if (cancelledRef.current) return;
-        const url = videoSequence[i];
-        setStatus(`Downloading video ${i + 1} of ${videoSequence.length}...`);
-        const fileData = await fetchFile(url);
-        const inputName = `input${i}.mp4`;
-        await ffmpeg.writeFile(inputName, fileData);
-        inputFiles.push(inputName);
+        setStatus(`Downloading clip ${i + 1} of ${videoSequence.length}...`);
+        setProgress(Math.round(((i) / videoSequence.length) * 70));
+        const blob = await fetchVideoBlob(videoSequence[i], i);
+        blobs.push(blob);
       }
 
       if (cancelledRef.current) return;
-      setStatus('Creating concat list...');
-      const concatContent = inputFiles.map(f => `file '${f}'`).join('\n');
-      const encoder = new TextEncoder();
-      await ffmpeg.writeFile('concat.txt', encoder.encode(concatContent));
+      setStatus('Packaging clips...');
+      setProgress(80);
 
-      if (cancelledRef.current) return;
-      setStatus('Joining and encoding...');
-      const fmt = FORMAT_OPTIONS.find(f => f.value === selectedFormat)!;
-      const outputFile = `output.${selectedFormat}`;
+      if (blobs.length === 1) {
+        downloadBlob(blobs[0], `animation_${Date.now()}.mp4`);
+      } else {
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+        blobs.forEach((blob, i) => {
+          zip.file(`clip_${String(i + 1).padStart(2, '0')}.mp4`, blob);
+        });
+        const zipBlob = await zip.generateAsync({ type: 'blob' }, (meta) => {
+          setProgress(80 + Math.round(meta.percent * 0.2));
+        });
+        if (cancelledRef.current) return;
+        downloadBlob(zipBlob, `animation_clips_${Date.now()}.zip`);
+      }
 
-      await ffmpeg.exec([
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', 'concat.txt',
-        ...fmt.codec,
-        outputFile,
-      ]);
-
-      if (cancelledRef.current) return;
-      setStatus('Preparing download...');
-      const data = await ffmpeg.readFile(outputFile);
-      const blob = new Blob([data], { type: fmt.mimeType });
-
-      if (blob.size === 0) throw new Error('Output file is empty. Encoding may have failed.');
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `animation_${Date.now()}.${selectedFormat}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+      setProgress(100);
       setStatus('Done!');
-      setTimeout(() => onClose(), 1500);
+      setTimeout(() => onClose(), 1200);
     } catch (err: unknown) {
       if (cancelledRef.current) return;
       const msg = err instanceof Error ? err.message : 'Export failed. Please try again.';
@@ -193,32 +138,14 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
 
         <div className="p-6 space-y-6">
           <div>
-            <p className="text-white/60 text-sm mb-1">
-              {videoSequence.length} video{videoSequence.length !== 1 ? 's' : ''} will be joined
+            <p className="text-white/60 text-sm">
+              {videoSequence.length} clip{videoSequence.length !== 1 ? 's' : ''} will be exported
             </p>
-          </div>
-
-          <div>
-            <label className="block text-white/80 text-sm font-chakra uppercase tracking-wider mb-3">
-              Output Format
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {FORMAT_OPTIONS.map((fmt) => (
-                <button
-                  key={fmt.value}
-                  onClick={() => !exporting && setSelectedFormat(fmt.value)}
-                  disabled={exporting}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    selectedFormat === fmt.value
-                      ? 'border-[#E70606] bg-[#E70606]/10'
-                      : 'border-white/10 bg-white/5 hover:border-white/20'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  <div className="font-chakra font-bold text-white text-sm">{fmt.label}</div>
-                  <div className="text-white/40 text-xs mt-0.5">{fmt.description}</div>
-                </button>
-              ))}
-            </div>
+            {videoSequence.length > 1 && (
+              <p className="text-white/40 text-xs mt-1">
+                Multiple clips will be packaged as a .zip file
+              </p>
+            )}
           </div>
 
           {exporting && (
@@ -255,7 +182,7 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
                 className="flex-1 py-3 rounded-lg border border-red-500/40 bg-red-900/20 text-red-400 hover:bg-red-900/40 hover:border-red-500/60 transition-all font-chakra text-sm uppercase tracking-wider flex items-center justify-center gap-2"
               >
                 <XCircle className="w-4 h-4" />
-                Cancel Export
+                Cancel
               </button>
             ) : (
               <button
@@ -278,7 +205,7 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Export {selectedFormat.toUpperCase()}
+                  Export {videoSequence.length > 1 ? 'ZIP' : 'MP4'}
                 </>
               )}
             </button>

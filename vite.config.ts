@@ -43,7 +43,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['lucide-react', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
+    exclude: ['lucide-react'],
     include: [
       '@thirdweb-dev/react',
       '@thirdweb-dev/react-core',
