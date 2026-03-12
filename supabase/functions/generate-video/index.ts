@@ -204,9 +204,10 @@ function truncatePrompt(prompt: string, maxLength = 500): string {
   return lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated;
 }
 
-function buildSeedancePrompt(prompt: string): string {
-  const languagePrefix = hasLanguageSpecified(prompt) ? "" : "[IMPORTANT: All speech, dialogue, narration and audio MUST be in English only] ";
-  return truncatePrompt(`${languagePrefix}${prompt}`);
+function buildSeedancePrompt(rawUserPrompt: string): string {
+  const userWantsOtherLanguage = /\b(speak|say|narrate|dialogue|audio|voice|language)\s+(in\s+)?(french|spanish|german|italian|portuguese|japanese|chinese|korean|arabic|hindi|russian|dutch|swedish|norwegian|danish|finnish|polish|turkish|greek|hebrew|thai|vietnamese|indonesian|malay|czech|hungarian|romanian|ukrainian)\b/i.test(rawUserPrompt);
+  const languagePrefix = userWantsOtherLanguage ? "" : "SYSTEM: All speech, dialogue, narration, and audio output MUST be in English. Do not generate any non-English speech. ";
+  return truncatePrompt(`${languagePrefix}${rawUserPrompt}`);
 }
 
 async function startSeedanceTask(prompt: string, imageUrl: string | null): Promise<string> {

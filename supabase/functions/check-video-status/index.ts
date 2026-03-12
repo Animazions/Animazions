@@ -107,10 +107,17 @@ Deno.serve(async (req: Request) => {
 
     const { data: taskRow } = await supabase
       .from("pending_video_tasks")
-      .select("model, project_id")
+      .select("model, project_id, status, video_url")
       .eq("task_id", taskId)
       .eq("user_id", userId)
       .maybeSingle();
+
+    if (taskRow?.status === "success" && taskRow?.video_url) {
+      return new Response(
+        JSON.stringify({ status: "success", videoUrl: taskRow.video_url }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const modelLabel = taskRow?.model || "clip";
     const fileName = `${userId}/${Date.now()}_clip_${modelLabel}.mp4`;
