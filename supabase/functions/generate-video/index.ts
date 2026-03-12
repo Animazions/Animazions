@@ -151,13 +151,19 @@ Deno.serve(async (req: Request) => {
 
 const ANIMATION_MANDATE = "animated cartoon style, 2D or 3D animation only, NOT photorealistic, NOT live-action, NOT cinematic film, animated movie quality";
 
+function hasLanguageSpecified(prompt: string): boolean {
+  const languageKeywords = /\b(english|french|spanish|german|italian|portuguese|japanese|chinese|korean|arabic|hindi|russian|dutch|swedish|norwegian|danish|finnish|polish|turkish|greek|hebrew|thai|vietnamese|indonesian|malay|czech|hungarian|romanian|ukrainian|language|spoken in|narrated in|dialogue in|audio in|voice in)\b/i;
+  return languageKeywords.test(prompt);
+}
+
 function buildEnhancedPrompt(
   userPrompt: string,
   storyboardUrls: string[],
   moodboardUrls: string[],
   storyboardPrompts: string[] = []
 ): string {
-  let enhancedPrompt = `${ANIMATION_MANDATE}. ${userPrompt}.`;
+  const languageNote = hasLanguageSpecified(userPrompt) ? "" : " All spoken dialogue, narration, and audio must be in English.";
+  let enhancedPrompt = `${ANIMATION_MANDATE}. ${userPrompt}.${languageNote}`;
 
   if (storyboardUrls.length > 0) {
     enhancedPrompt += ` Animate EXACTLY from the provided storyboard image: match every character design, pose, expression, clothing, background, color palette, and composition precisely.`;
@@ -175,6 +181,7 @@ function buildEnhancedPrompt(
 
 function buildImageAnchoredPrompt(userDirection: string, shotPrompt: string): string {
   const direction = shotPrompt || userDirection || "animate the scene";
+  const languageNote = hasLanguageSpecified(userDirection) ? "" : "All spoken dialogue, narration, and audio must be in English.";
 
   return [
     "Image-to-video animation.",
@@ -186,7 +193,8 @@ function buildImageAnchoredPrompt(userDirection: string, shotPrompt: string): st
     "Do NOT change any visual element — animate only: add motion, camera movement, and life to what is already shown.",
     `Animation direction: ${direction}.`,
     "Output must feel like the image is coming alive, not a new scene.",
-  ].join(" ");
+    languageNote,
+  ].filter(Boolean).join(" ");
 }
 
 function truncatePrompt(prompt: string, maxLength = 500): string {
