@@ -57,6 +57,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [seedancePollStatus, setSeedancePollStatus] = useState<string>('');
   const [showSignUpNudge, setShowSignUpNudge] = useState(false);
   const [nudgeAuthView, setNudgeAuthView] = useState<'prompt' | 'login' | 'signup'>('prompt');
+  const [showSaveProjectNudge, setShowSaveProjectNudge] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [showNameProjectModal, setShowNameProjectModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
@@ -505,6 +507,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setGeneratedImage(data.imageUrl);
         setShowImageWaitMessage(false);
         if (!user) setShowSignUpNudge(true);
+        else if (!projectId) setShowSaveProjectNudge(true);
         setTimeout(() => {
           generatedImagesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -544,6 +547,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             setGeneratedImage(statusData.imageUrl);
             setShowImageWaitMessage(false);
             if (!user) setShowSignUpNudge(true);
+            else if (!projectId) setShowSaveProjectNudge(true);
             setTimeout(() => {
               generatedImagesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
@@ -777,6 +781,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setKlingTaskId(null);
         setKlingPollStatus('');
         if (!user) setShowSignUpNudge(true);
+        else if (!projectId) setShowSaveProjectNudge(true);
         setTimeout(() => {
           generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -925,6 +930,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setShowVideoWaitMessage(false);
         setGeneratingVideo(false);
         if (!user) setShowSignUpNudge(true);
+        else if (!projectId) setShowSaveProjectNudge(true);
         setTimeout(() => {
           generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -1200,7 +1206,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                     Log In
                   </button>
                   <button
-                    onClick={() => { setShowSignUpNudge(false); setNudgeAuthView('prompt'); }}
+                    onClick={() => { setShowSignUpNudge(false); setNudgeAuthView('prompt'); setNudgeDismissed(true); }}
                     className="text-center text-xs text-gray-500 hover:text-gray-400 transition underline underline-offset-2 font-jost"
                   >
                     Not yet — continue without saving
@@ -1306,7 +1312,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 </div>
 
                 <button
-                  onClick={() => { setShowSignUpNudge(false); setNudgeAuthView('prompt'); }}
+                  onClick={() => { setShowSignUpNudge(false); setNudgeAuthView('prompt'); setNudgeDismissed(true); }}
                   className="mt-4 text-center text-xs text-gray-600 hover:text-gray-400 transition underline underline-offset-2 font-jost w-full"
                 >
                   Not yet — continue without saving
@@ -1359,6 +1365,47 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 {creatingProject ? 'Creating...' : 'Create Project'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showSaveProjectNudge && user && !projectId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
+          <div className="bg-gray-950 border border-gray-700 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-[#E70606] rounded-lg flex items-center justify-center shrink-0">
+                <FolderOpen className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="font-krona text-xl text-white leading-tight">Save Your Project</h2>
+            </div>
+            <p className="text-gray-300 font-jost text-sm mt-4 leading-relaxed">
+              Your work is looking great! Save your project now to make sure nothing is lost and to enable auto-saving as you continue.
+            </p>
+            <div className="mt-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-4 py-3">
+              <p className="text-yellow-300 font-jost text-sm font-semibold">
+                Your images and settings are not saved yet. Give your project a name to start saving automatically.
+              </p>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowSaveProjectNudge(false);
+                  setNewProjectName('');
+                  setCreateProjectError('');
+                  setShowNameProjectModal(true);
+                }}
+                className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra text-sm uppercase tracking-wider py-3 rounded-lg transition-all hover:scale-105 flex items-center justify-center gap-2"
+              >
+                <FolderOpen className="w-4 h-4" />
+                Save Project
+              </button>
+              <button
+                onClick={() => { setShowSaveProjectNudge(false); setNudgeDismissed(true); }}
+                className="text-center text-xs text-gray-500 hover:text-gray-400 transition underline underline-offset-2 font-jost"
+              >
+                Not yet — continue without saving
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1565,6 +1612,36 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             Transform your ideas into stunning animations using cutting-edge AI technology. Create images, build storyboards, and generate professional-quality animated videos.
           </p>
         </div>
+
+        {nudgeDismissed && !projectId && (
+          <div className="mb-6 flex items-center justify-between gap-4 bg-gray-900 border border-gray-700 rounded-xl px-5 py-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 bg-[#E70606]/20 border border-[#E70606]/40 rounded-lg flex items-center justify-center shrink-0">
+                <FolderOpen className="w-4 h-4 text-[#E70606]" />
+              </div>
+              <p className="text-sm text-gray-300 font-jost leading-tight">
+                Your work is not saved yet.{' '}
+                <span className="text-yellow-400 font-semibold">Save your project</span> to keep your images and settings.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (user) {
+                  setNewProjectName('');
+                  setCreateProjectError('');
+                  setShowNameProjectModal(true);
+                } else {
+                  setNudgeAuthView('prompt');
+                  setShowSignUpNudge(true);
+                }
+              }}
+              className="shrink-0 bg-[#E70606] hover:bg-[#c00505] text-white font-chakra text-xs uppercase tracking-wider px-4 py-2 rounded-lg transition-all hover:scale-105 flex items-center gap-2"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Save Project
+            </button>
+          </div>
+        )}
 
         {/* 1. Image Generation Section */}
         <section className="mb-16 bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl p-8">
@@ -2296,6 +2373,36 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </button>
           )}
         </section>
+
+        {nudgeDismissed && !projectId && (
+          <div className="mb-10 flex items-center justify-between gap-4 bg-gray-900 border border-gray-700 rounded-xl px-5 py-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 bg-[#E70606]/20 border border-[#E70606]/40 rounded-lg flex items-center justify-center shrink-0">
+                <FolderOpen className="w-4 h-4 text-[#E70606]" />
+              </div>
+              <p className="text-sm text-gray-300 font-jost leading-tight">
+                Don't lose your work!{' '}
+                <span className="text-yellow-400 font-semibold">Save your project</span> to keep your videos and all progress.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (user) {
+                  setNewProjectName('');
+                  setCreateProjectError('');
+                  setShowNameProjectModal(true);
+                } else {
+                  setNudgeAuthView('prompt');
+                  setShowSignUpNudge(true);
+                }
+              }}
+              className="shrink-0 bg-[#E70606] hover:bg-[#c00505] text-white font-chakra text-xs uppercase tracking-wider px-4 py-2 rounded-lg transition-all hover:scale-105 flex items-center gap-2"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Save Project
+            </button>
+          </div>
+        )}
 
         {/* Community Images Gallery */}
         <section className="mb-16">
