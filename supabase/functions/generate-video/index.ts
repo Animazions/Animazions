@@ -183,7 +183,7 @@ async function startSeedanceTask(prompt: string, imageUrl: string | null): Promi
     resolution: "720p",
     duration: "8",
     fixed_lens: false,
-    generate_audio: false,
+    generate_audio: true,
   };
 
   if (imageUrl) {

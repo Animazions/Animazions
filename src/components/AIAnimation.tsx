@@ -1609,7 +1609,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           </div>
 
           <p className="text-gray-400 font-jost mb-4 text-sm">
-            It is recommended to have more images in your storyboard for longer videos but each AI model operates differently so please feel free to experiment. Videos can be generated with 1 image too. Generated images from above can be added here.
+            AI Video models will generate videos per image in the order you place your images in the storyboard. It is recommended to use 5 to 10 seconds video duration generation per image whilst you improve your prompting skills. It is recommended to ensure your storyboard images flow well so when you join your videos together it will create a fluid and consistent long form video.
           </p>
 
           <div
