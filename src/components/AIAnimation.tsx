@@ -803,7 +803,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const parsePanelPrompts = (rawPrompt: string): { panelIndex: number; prompt: string }[] => {
     const results: { panelIndex: number; prompt: string }[] = [];
     const lines = rawPrompt.split('\n').map(l => l.trim()).filter(Boolean);
-    const panelLineRegex = /^(?:panel|image|img)\s*#?\s*(\d+)\s*[:\-]\s*(.+)/i;
+    const panelLineRegex = /^(?:panel|image|img)\s*#?\s*(\d+)\s*[^\d\s]\s*(.+)/i;
     for (const line of lines) {
       const match = line.match(panelLineRegex);
       if (match) {
@@ -2048,7 +2048,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </label>
             <p className="font-jost text-xs text-gray-500 mb-3 leading-relaxed">
               The AI Video model animates one image/panel at a time. Reference each panel by number on its own line — only the panels you mention will be generated.
-              Each line should follow the format: <span className="text-gray-400 font-medium">Panel 1: slow zoom on the hero</span> or <span className="text-gray-400 font-medium">Image 2: dramatic explosion</span>.
+              Each line should follow the format: <span className="text-gray-400 font-medium">Panel 1: slow zoom on the hero</span> or <span className="text-gray-400 font-medium">Image 2. dramatic explosion</span> — any separator (colon, dash, dot, etc.) works after the number.
               If no panel numbers are mentioned, the prompt applies to all storyboard images. Tutorials are in the <span className="text-[#E70606] font-medium">'Guides and Tutorials'</span> page.
             </p>
             <textarea
