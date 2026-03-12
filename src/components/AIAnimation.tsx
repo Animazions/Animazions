@@ -3,6 +3,7 @@ import { Upload, Image as ImageIcon, Film, Sparkles, Plus, X, GripVertical, Fold
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { enhancePromptWithAnimationStyle } from '../utils/animationStyles';
+import VideoExportModal from './VideoExportModal';
 
 interface AIAnimationProps {
   onNavigate: (page: string, projectId?: string) => void;
@@ -45,8 +46,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [videoGenError, setVideoGenError] = useState<string>('');
   const [draggedVideoIndex, setDraggedVideoIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string>('');
+  const [showExportModal, setShowExportModal] = useState(false);
   const [customPanels, setCustomPanels] = useState<number | null>(null);
   const [showImageWaitMessage, setShowImageWaitMessage] = useState(false);
   const [showVideoWaitMessage, setShowVideoWaitMessage] = useState(false);
@@ -1046,101 +1046,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setVideoSequence(newSequence);
   };
 
-  const handleExportVideos = async () => {
-    if (videoSequence.length === 0) {
-      setExportError('No videos in sequence to export.');
-      return;
-    }
-
-    setExporting(true);
-    setExportError('');
-
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Failed to get canvas context');
-
-      const stream = canvas.captureStream(30);
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 2500000,
-      });
-
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-
-      const videos: HTMLVideoElement[] = [];
-      const videoDurations: number[] = [];
-
-      for (const videoUrl of videoSequence) {
-        const video = document.createElement('video');
-        video.src = videoUrl;
-        video.crossOrigin = 'anonymous';
-        await new Promise<void>((resolve, reject) => {
-          video.onloadedmetadata = () => {
-            videoDurations.push(video.duration);
-            videos.push(video);
-            resolve();
-          };
-          video.onerror = () => reject(new Error(`Failed to load video: ${videoUrl}`));
-        });
-      }
-
-      mediaRecorder.start();
-
-      let currentTime = 0;
-      const totalDuration = videoDurations.reduce((a, b) => a + b, 0);
-      const startTime = Date.now();
-
-      const renderFrame = () => {
-        const elapsed = (Date.now() - startTime) / 1000;
-
-        if (elapsed >= totalDuration) {
-          mediaRecorder.stop();
-          return;
-        }
-
-        let accumulatedTime = 0;
-        for (let i = 0; i < videos.length; i++) {
-          const videoDuration = videoDurations[i];
-          if (elapsed >= accumulatedTime && elapsed < accumulatedTime + videoDuration) {
-            const videoTime = elapsed - accumulatedTime;
-            videos[i].currentTime = videoTime;
-            ctx.drawImage(videos[i], 0, 0, canvas.width, canvas.height);
-            break;
-          }
-          accumulatedTime += videoDuration;
-        }
-
-        requestAnimationFrame(renderFrame);
-      };
-
-      await new Promise<void>((resolve) => {
-        mediaRecorder.onstop = () => resolve();
-        renderFrame();
-      });
-
-      const blob = new Blob(chunks, { type: 'video/webm' });
-
-      if (blob.size === 0) {
-        throw new Error('Failed to create video');
-      }
-
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.href = url;
-      link.download = `animation_${Date.now()}.webm`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setExportError(err?.message || 'Failed to export video. Please try again.');
-    } finally {
-      setExporting(false);
-    }
+  const handleExportVideos = () => {
+    if (videoSequence.length === 0) return;
+    setShowExportModal(true);
   };
 
   const communityImages = [
@@ -2350,30 +2258,13 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             )}
           </div>
 
-          {exportError && (
-            <div className="mt-4 bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <p className="text-red-300 text-sm font-jost">{exportError}</p>
-            </div>
-          )}
-
           {videoSequence.length > 0 && (
             <button
               onClick={handleExportVideos}
-              disabled={exporting}
-              className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+              className="mt-6 bg-[#E70606] hover:bg-[#c00505] px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 flex items-center gap-2"
             >
-              {exporting ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Joining Videos...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  Join and Export Video
-                </>
-              )}
+              <Download className="w-4 h-4" />
+              Join and Export Video
             </button>
           )}
         </section>
@@ -2586,6 +2477,13 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {showExportModal && (
+        <VideoExportModal
+          videoSequence={videoSequence}
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   );
