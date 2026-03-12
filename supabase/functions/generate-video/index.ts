@@ -181,7 +181,7 @@ async function startSeedanceTask(prompt: string, imageUrl: string | null): Promi
     prompt: truncatePrompt(prompt),
     aspect_ratio: "16:9",
     resolution: "720p",
-    duration: 8,
+    duration: "8",
     fixed_lens: false,
     generate_audio: false,
   };
