@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, Download, Loader, Film, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import JSZip from 'jszip';
 
 interface VideoExportModalProps {
   videoSequence: string[];
@@ -93,7 +94,6 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
       if (blobs.length === 1) {
         downloadBlob(blobs[0], `animation_${Date.now()}.mp4`);
       } else {
-        const JSZip = (await import('jszip')).default;
         const zip = new JSZip();
         blobs.forEach((blob, i) => {
           zip.file(`clip_${String(i + 1).padStart(2, '0')}.mp4`, blob);
