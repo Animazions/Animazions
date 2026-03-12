@@ -181,20 +181,8 @@ function buildEnhancedPrompt(
 
 function buildImageAnchoredPrompt(userDirection: string, shotPrompt: string): string {
   const direction = shotPrompt || userDirection || "animate the scene";
-  const languageNote = hasLanguageSpecified(userDirection) ? "" : "All spoken dialogue, narration, and audio must be in English.";
-
-  return [
-    "Image-to-video animation.",
-    "Use the provided reference image as the ONLY visual source.",
-    "ALL characters, their designs, faces, clothing, colours, and proportions must be taken EXACTLY from the image.",
-    "ALL backgrounds, environments, settings, colours, and lighting must be taken EXACTLY from the image.",
-    "ALL art style, line style, shading, and visual aesthetic must match the image precisely.",
-    "Do NOT invent new characters, new environments, new colours, or any element not present in the image.",
-    "Do NOT change any visual element — animate only: add motion, camera movement, and life to what is already shown.",
-    `Animation direction: ${direction}.`,
-    "Output must feel like the image is coming alive, not a new scene.",
-    languageNote,
-  ].filter(Boolean).join(" ");
+  const languageNote = hasLanguageSpecified(userDirection) ? "" : " All speech and audio must be in English.";
+  return truncatePrompt(`${direction} Keep all characters, backgrounds, art style, and colors matching the reference image exactly.${languageNote}`);
 }
 
 function truncatePrompt(prompt: string, maxLength = 500): string {
