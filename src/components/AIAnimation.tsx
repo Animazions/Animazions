@@ -53,6 +53,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [klingTaskId, setKlingTaskId] = useState<string | null>(null);
   const [klingPollStatus, setKlingPollStatus] = useState<string>('');
   const [klingPolling, setKlingPolling] = useState(false);
+  const [seedanceTaskIds, setSeedanceTaskIds] = useState<string[]>([]);
+  const [seedancePollStatus, setSeedancePollStatus] = useState<string>('');
   const [showSignUpNudge, setShowSignUpNudge] = useState(false);
   const [nudgeAuthView, setNudgeAuthView] = useState<'prompt' | 'login' | 'signup'>('prompt');
   const [showNameProjectModal, setShowNameProjectModal] = useState(false);
@@ -202,18 +204,18 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   ];
 
   const videoModels = [
-    { name: 'Seedance 1.5 Pro (FREE)', free: true },
-    { name: 'Kling 3.0', free: false },
-    { name: 'Runway Gen-3', free: false },
-    { name: 'Pika Labs', free: false },
-    { name: 'Stable Video Diffusion', free: false },
-    { name: 'Synthesia', free: false },
-    { name: 'Kaiber AI', free: false },
-    { name: 'Neural Frames', free: false },
-    { name: 'Domo AI', free: false },
-    { name: 'Moonvalley', free: false },
-    { name: 'Genmo', free: false },
-    { name: 'AnimateDiff', free: false }
+    { name: 'Seedance 1.5 Pro (FREE)', free: true, imageToVideo: true },
+    { name: 'Kling 3.0', free: false, imageToVideo: true },
+    { name: 'Runway Gen-3', free: false, imageToVideo: false },
+    { name: 'Pika Labs', free: false, imageToVideo: false },
+    { name: 'Stable Video Diffusion', free: false, imageToVideo: false },
+    { name: 'Synthesia', free: false, imageToVideo: false },
+    { name: 'Kaiber AI', free: false, imageToVideo: false },
+    { name: 'Neural Frames', free: false, imageToVideo: false },
+    { name: 'Domo AI', free: false, imageToVideo: false },
+    { name: 'Moonvalley', free: false, imageToVideo: false },
+    { name: 'Genmo', free: false, imageToVideo: false },
+    { name: 'AnimateDiff', free: false, imageToVideo: false }
   ];
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -595,6 +597,56 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setGeneratingVideo(false);
   };
 
+  const pollSeedanceTasks = async (taskIds: string[]) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Apikey': supabaseKey,
+    };
+
+    const pending = new Set(taskIds);
+    const maxAttempts = 72;
+    let attempts = 0;
+
+    while (pending.size > 0 && attempts < maxAttempts) {
+      await new Promise(r => setTimeout(r, 5000));
+      attempts++;
+      setSeedancePollStatus(`Generating clips from storyboard... (${taskIds.length - pending.size}/${taskIds.length} complete, attempt ${attempts})`);
+
+      const toRemove: string[] = [];
+      for (const taskId of Array.from(pending)) {
+        try {
+          const res = await fetch(`${supabaseUrl}/functions/v1/check-video-status`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ taskId, userId: user!.id }),
+          });
+          const data = await res.json();
+          if (data.status === 'success' && data.videoUrl) {
+            setGeneratedVideos(prev => [...prev, data.videoUrl]);
+            toRemove.push(taskId);
+          } else if (data.status === 'failed') {
+            toRemove.push(taskId);
+          }
+        } catch {
+          // keep polling
+        }
+      }
+      toRemove.forEach(id => pending.delete(id));
+    }
+
+    setSeedanceTaskIds([]);
+    setSeedancePollStatus('');
+    setShowVideoWaitMessage(false);
+    setGeneratingVideo(false);
+
+    setTimeout(() => {
+      generatedVideosSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   const handleRetrieveKlingVideo = async (taskId: string) => {
     if (!user) return;
     setGeneratingVideo(true);
@@ -666,6 +718,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setKlingTaskId(null);
     setKlingPollStatus('');
     setKlingPolling(false);
+    setSeedanceTaskIds([]);
+    setSeedancePollStatus('');
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -711,6 +765,14 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         setKlingTaskId(data.taskId);
         setKlingPollStatus('Video submitted to Kling AI. Waiting for result...');
         pollKlingTaskStatus(data.taskId);
+        return;
+      }
+
+      if (data.taskIds && Array.isArray(data.taskIds)) {
+        setSeedanceTaskIds(data.taskIds);
+        const imageCount = data.taskIds.length;
+        setSeedancePollStatus(`Submitted ${imageCount} image-to-video clip${imageCount > 1 ? 's' : ''} to Seedance AI. Waiting for results...`);
+        pollSeedanceTasks(data.taskIds);
         return;
       }
 
@@ -1654,8 +1716,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white focus:outline-none focus:border-[#E70606] transition-colors"
               >
                 <option value="">Select an AI video generator</option>
-                <optgroup label="-- FREE --">
-                  {videoModels.filter(m => m.free).map(model => (
+                <optgroup label="-- FREE (Image-to-Video) --">
+                  {videoModels.filter(m => m.free && m.imageToVideo).map(model => (
                     <option key={model.name} value={model.name}>{model.name}</option>
                   ))}
                 </optgroup>
@@ -1665,6 +1727,14 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                   ))}
                 </optgroup>
               </select>
+              {selectedVideoModel && videoModels.find(m => m.name === selectedVideoModel)?.imageToVideo && storyboardImages.length > 0 && (
+                <div className="mt-3 bg-green-900/30 border border-green-700 rounded-lg p-3 flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+                  <p className="text-green-300 text-sm font-jost">
+                    Image-to-video mode active — will generate <strong>{storyboardImages.length} clip{storyboardImages.length > 1 ? 's' : ''}</strong>, one per storyboard image.
+                  </p>
+                </div>
+              )}
               {selectedVideoModel && videoModels.find(m => m.name === selectedVideoModel)?.free && (
                 <div className="mt-3 bg-yellow-900/30 border border-yellow-700 rounded-lg p-3 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
@@ -1778,6 +1848,23 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 <Download className="w-4 h-4" />
                 Check & Retrieve Video
               </button>
+            </div>
+          )}
+
+          {seedanceTaskIds.length > 0 && (
+            <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+                <p className="text-blue-300 text-sm font-jost font-semibold">
+                  Seedance AI is animating your storyboard images...
+                </p>
+              </div>
+              {seedancePollStatus && (
+                <p className="text-blue-400 text-xs font-jost">{seedancePollStatus}</p>
+              )}
+              <p className="text-gray-500 text-xs font-jost mt-2">
+                Generating {seedanceTaskIds.length} clip{seedanceTaskIds.length > 1 ? 's' : ''} — one per storyboard image. Each clip will appear as it completes.
+              </p>
             </div>
           )}
         </section>
