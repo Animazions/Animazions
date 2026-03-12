@@ -181,14 +181,13 @@ async function startSeedanceTask(prompt: string, imageUrl: string | null): Promi
     prompt: truncatePrompt(prompt),
     aspect_ratio: "16:9",
     resolution: "720p",
-    duration: "4",
+    duration: 8,
     fixed_lens: false,
-    generate_audio: true,
+    generate_audio: false,
   };
 
   if (imageUrl) {
-    inputPayload.image_url = imageUrl;
-    inputPayload.image = imageUrl;
+    inputPayload.input_urls = [imageUrl];
   }
 
   console.log("Seedance task payload:", JSON.stringify({ model: "bytedance/seedance-1.5-pro", input: inputPayload }, null, 2));
