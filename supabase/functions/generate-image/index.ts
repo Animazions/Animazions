@@ -12,13 +12,34 @@ const KIE_MODEL_MAP: Record<string, string> = {
   "Seedream 5.0 Lite": "seedream/5-lite-text-to-image",
 };
 
+const KIE_IMG2IMG_MODEL_MAP: Record<string, string> = {
+  "Nano Banana Pro": "nano-banana-pro",
+  "Seedream 5.0 Lite": "seedream/5-lite-image-to-image",
+};
+
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const { prompt, model, imageAnalysis } = await req.json();
+    const { prompt, model, imageAnalysis, referenceImageUrl } = await req.json();
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return new Response(
@@ -27,11 +48,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const hasReference = !!referenceImageUrl && typeof referenceImageUrl === "string";
+
     let enhancedPrompt = prompt;
     if (imageAnalysis && imageAnalysis.fullDescription) {
       enhancedPrompt = `${prompt}
 
-REFERENCE IMAGE STYLE CHARACTERISTICS:
+REFERENCE IMAGE STYLE CHARACTERISTICS — STRICT CONSISTENCY REQUIRED:
 Art Style: ${imageAnalysis.artStyle}
 Color Palette: ${imageAnalysis.colorPalette}
 Characters: ${imageAnalysis.characters}
@@ -40,7 +63,7 @@ Composition: ${imageAnalysis.composition}
 Lighting: ${imageAnalysis.lighting}
 Mood: ${imageAnalysis.mood}
 
-CRITICAL: Generate an image that EXACTLY matches these visual characteristics. Replicate the art style, colors, character designs, backgrounds, and overall aesthetic precisely.`;
+CRITICAL: You MUST replicate the exact art style, color palette, character designs, line art, shading, backgrounds, and overall aesthetic from the reference image with maximum fidelity. Any deviation in style, character appearance, or color is unacceptable.`;
     }
 
     const trimmedPrompt = enhancedPrompt.trim();
@@ -48,7 +71,15 @@ CRITICAL: Generate an image that EXACTLY matches these visual characteristics. R
 
     if (model === "Flux (Pollinations)" || model === "Turbo (Pollinations)" || !KIE_MODEL_MAP[model]) {
       const pollinationsModel = model === "Turbo (Pollinations)" ? "turbo" : "flux";
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${pollinationsModel}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      let imageUrl: string;
+
+      if (hasReference) {
+        const encodedRef = encodeURIComponent(referenceImageUrl);
+        imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${pollinationsModel}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}&image=${encodedRef}`;
+      } else {
+        imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${pollinationsModel}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+      }
+
       return new Response(
         JSON.stringify({ imageUrl }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -60,8 +91,20 @@ CRITICAL: Generate an image that EXACTLY matches these visual characteristics. R
       throw new Error(`${model} requires KIE_AI_API_KEY configuration`);
     }
 
-    const kieModel = KIE_MODEL_MAP[model];
-    const extraInput: Record<string, string> = model === "Seedream 5.0 Lite" ? { quality: "basic" } : {};
+    let kieModel = KIE_MODEL_MAP[model];
+    const extraInput: Record<string, unknown> = model === "Seedream 5.0 Lite" ? { quality: "basic" } : {};
+
+    if (hasReference) {
+      const img2imgModel = KIE_IMG2IMG_MODEL_MAP[model];
+      if (img2imgModel) {
+        kieModel = img2imgModel;
+        const base64Image = await fetchImageAsBase64(referenceImageUrl);
+        if (base64Image) {
+          extraInput.image = base64Image;
+          extraInput.image_strength = 0.35;
+        }
+      }
+    }
 
     const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
       method: "POST",

@@ -63,6 +63,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [createProjectError, setCreateProjectError] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<'image' | 'video' | null>(null);
+  const [selectedReferencePanel, setSelectedReferencePanel] = useState<number | null>(null);
   const cancelImageRef = useRef(false);
   const cancelVideoRef = useRef(false);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
@@ -439,14 +440,46 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       };
 
       let imageAnalysis = null;
+      let referenceImageUrl: string | null = null;
 
-      if (imagePrompt.toLowerCase().includes('panel') || imagePrompt.toLowerCase().includes('image') || imagePrompt.toLowerCase().includes('same style') || imagePrompt.toLowerCase().includes('like')) {
-        if (storyboardImages.length > 0) {
+      const parsePanelIndex = (text: string): number | null => {
+        const patterns = [
+          /(?:panel|image|img)\s*#?\s*(\d+)/i,
+          /(\d+)(?:st|nd|rd|th)?\s+(?:panel|image|img)/i,
+        ];
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num >= 1) return num - 1;
+          }
+        }
+        return null;
+      };
+
+      const promptLower = imagePrompt.toLowerCase();
+      const mentionsReference = promptLower.includes('panel') || promptLower.includes('image') || promptLower.includes('img') || promptLower.includes('same style') || promptLower.includes('like') || selectedReferencePanel !== null;
+
+      if (mentionsReference && storyboardImages.length > 0) {
+        let targetIndex: number | null = null;
+
+        if (selectedReferencePanel !== null) {
+          targetIndex = selectedReferencePanel;
+        } else {
+          targetIndex = parsePanelIndex(imagePrompt);
+          if (targetIndex === null) targetIndex = 0;
+        }
+
+        const clampedIndex = Math.min(targetIndex, storyboardImages.length - 1);
+        const targetImage = storyboardImages[clampedIndex];
+
+        if (targetImage) {
+          referenceImageUrl = targetImage;
           try {
             const analysisRes = await fetch(`${supabaseUrl}/functions/v1/analyze-image-style`, {
               method: 'POST',
               headers,
-              body: JSON.stringify({ imageUrl: storyboardImages[0] }),
+              body: JSON.stringify({ imageUrl: targetImage }),
             });
             if (analysisRes.ok) {
               imageAnalysis = await analysisRes.json();
@@ -461,7 +494,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ prompt: enhancedPrompt, model: selectedImageModel, imageAnalysis }),
+        body: JSON.stringify({ prompt: enhancedPrompt, model: selectedImageModel, imageAnalysis, referenceImageUrl }),
       });
 
       const data = await res.json();
@@ -1544,6 +1577,62 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white placeholder:text-gray-600 focus:outline-none focus:border-[#E70606] transition-colors resize-none h-32"
             />
           </div>
+
+          {storyboardImages.length > 0 && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400">
+                  Reference Panel for Style Consistency
+                </label>
+                {selectedReferencePanel !== null && (
+                  <button
+                    onClick={() => setSelectedReferencePanel(null)}
+                    className="text-xs font-chakra uppercase tracking-wider text-gray-500 hover:text-red-400 transition flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" />
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p className="text-xs font-jost text-gray-500 mb-3">
+                Select a storyboard panel to use as a visual reference. The AI will strictly match its art style, colors, and character design.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {storyboardImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedReferencePanel(selectedReferencePanel === index ? null : index)}
+                    className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                      selectedReferencePanel === index
+                        ? 'border-[#E70606] ring-2 ring-[#E70606]/40 scale-105'
+                        : 'border-gray-700 hover:border-gray-500'
+                    }`}
+                    title={`Use Panel ${index + 1} as reference`}
+                  >
+                    <img src={img} alt={`Panel ${index + 1}`} className="w-full h-full object-cover" />
+                    <div className={`absolute inset-0 flex items-end justify-start p-1 ${selectedReferencePanel === index ? 'bg-[#E70606]/20' : 'bg-black/30'}`}>
+                      <span className="font-krona text-white text-[9px] leading-none drop-shadow">{index + 1}</span>
+                    </div>
+                    {selectedReferencePanel === index && (
+                      <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#E70606] rounded-full flex items-center justify-center">
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                          <path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {selectedReferencePanel !== null && (
+                <div className="mt-3 bg-[#E70606]/10 border border-[#E70606]/30 rounded-lg px-3 py-2 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#E70606] shrink-0" />
+                  <p className="text-xs font-jost text-gray-300">
+                    Panel {selectedReferencePanel + 1} will be used as the style reference. The AI will strictly replicate its visual characteristics.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {selectedImageModel && !imageModels.find(m => m.name === selectedImageModel)?.free && (
             <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-start gap-2">
