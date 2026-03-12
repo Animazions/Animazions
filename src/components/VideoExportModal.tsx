@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { X, Download, Loader, Film } from 'lucide-react';
+import { X, Download, Loader, Film, XCircle } from 'lucide-react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
@@ -62,9 +62,25 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
   const [status, setStatus] = useState('');
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
+  const [cancelled, setCancelled] = useState(false);
   const ffmpegRef = useRef<FFmpeg | null>(null);
+  const cancelledRef = useRef(false);
+
+  const handleCancel = () => {
+    cancelledRef.current = true;
+    setCancelled(true);
+    if (ffmpegRef.current) {
+      try { ffmpegRef.current.terminate(); } catch { /* ignore */ }
+      ffmpegRef.current = null;
+    }
+    setExporting(false);
+    setStatus('');
+    setProgress(0);
+  };
 
   const handleExport = async () => {
+    cancelledRef.current = false;
+    setCancelled(false);
     setExporting(true);
     setError('');
     setProgress(0);
@@ -75,25 +91,33 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
       ffmpegRef.current = ffmpeg;
 
       ffmpeg.on('progress', ({ progress: p }) => {
-        setProgress(Math.round(p * 100));
+        if (!cancelledRef.current) setProgress(Math.round(p * 100));
       });
 
       ffmpeg.on('log', ({ message }) => {
-        if (message.includes('frame=') || message.includes('time=')) {
+        if (!cancelledRef.current && (message.includes('frame=') || message.includes('time='))) {
           setStatus('Encoding...');
         }
       });
 
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        coreURL: await toBlobURL(
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+          'text/javascript'
+        ),
+        wasmURL: await toBlobURL(
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+          'application/wasm'
+        ),
       });
+
+      if (cancelledRef.current) return;
 
       setStatus('Downloading videos...');
 
       const inputFiles: string[] = [];
       for (let i = 0; i < videoSequence.length; i++) {
+        if (cancelledRef.current) return;
         const url = videoSequence[i];
         setStatus(`Downloading video ${i + 1} of ${videoSequence.length}...`);
         const fileData = await fetchFile(url);
@@ -102,11 +126,13 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
         inputFiles.push(inputName);
       }
 
+      if (cancelledRef.current) return;
       setStatus('Creating concat list...');
       const concatContent = inputFiles.map(f => `file '${f}'`).join('\n');
       const encoder = new TextEncoder();
       await ffmpeg.writeFile('concat.txt', encoder.encode(concatContent));
 
+      if (cancelledRef.current) return;
       setStatus('Joining and encoding...');
       const fmt = FORMAT_OPTIONS.find(f => f.value === selectedFormat)!;
       const outputFile = `output.${selectedFormat}`;
@@ -119,6 +145,7 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
         outputFile,
       ]);
 
+      if (cancelledRef.current) return;
       setStatus('Preparing download...');
       const data = await ffmpeg.readFile(outputFile);
       const blob = new Blob([data], { type: fmt.mimeType });
@@ -137,10 +164,11 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
       setStatus('Done!');
       setTimeout(() => onClose(), 1500);
     } catch (err: unknown) {
+      if (cancelledRef.current) return;
       const msg = err instanceof Error ? err.message : 'Export failed. Please try again.';
       setError(msg);
     } finally {
-      setExporting(false);
+      if (!cancelledRef.current) setExporting(false);
     }
   };
 
@@ -208,6 +236,12 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
             </div>
           )}
 
+          {cancelled && !exporting && (
+            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 text-yellow-400 text-sm">
+              Export cancelled.
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
               {error}
@@ -215,7 +249,15 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
           )}
 
           <div className="flex gap-3">
-            {!exporting && (
+            {exporting ? (
+              <button
+                onClick={handleCancel}
+                className="flex-1 py-3 rounded-lg border border-red-500/40 bg-red-900/20 text-red-400 hover:bg-red-900/40 hover:border-red-500/60 transition-all font-chakra text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                Cancel Export
+              </button>
+            ) : (
               <button
                 onClick={onClose}
                 className="flex-1 py-3 rounded-lg border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-all font-chakra text-sm uppercase tracking-wider"
