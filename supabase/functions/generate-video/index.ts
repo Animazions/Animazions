@@ -148,9 +148,20 @@ function buildEnhancedPrompt(
   return enhancedPrompt;
 }
 
-function buildShotPrompt(basePrompt: string, shotPrompt: string): string {
-  const shot = shotPrompt || basePrompt;
-  return `${ANIMATION_MANDATE}. ${shot}. Animate the provided storyboard image: bring characters and scene to life while preserving all visual details exactly.`;
+function buildImageAnchoredPrompt(userDirection: string, shotPrompt: string): string {
+  const direction = shotPrompt || userDirection || "animate the scene";
+
+  return [
+    "Image-to-video animation.",
+    "Use the provided reference image as the ONLY visual source.",
+    "ALL characters, their designs, faces, clothing, colours, and proportions must be taken EXACTLY from the image.",
+    "ALL backgrounds, environments, settings, colours, and lighting must be taken EXACTLY from the image.",
+    "ALL art style, line style, shading, and visual aesthetic must match the image precisely.",
+    "Do NOT invent new characters, new environments, new colours, or any element not present in the image.",
+    "Do NOT change any visual element — animate only: add motion, camera movement, and life to what is already shown.",
+    `Animation direction: ${direction}.`,
+    "Output must feel like the image is coming alive, not a new scene.",
+  ].join(" ");
 }
 
 function truncatePrompt(prompt: string, maxLength = 500): string {
@@ -176,8 +187,11 @@ async function startSeedanceTask(prompt: string, imageUrl: string | null): Promi
   };
 
   if (imageUrl) {
+    inputPayload.image_url = imageUrl;
     inputPayload.image = imageUrl;
   }
+
+  console.log("Seedance task payload:", JSON.stringify({ model: "bytedance/seedance-1.5-pro", input: inputPayload }, null, 2));
 
   const taskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
     method: "POST",
@@ -192,6 +206,7 @@ async function startSeedanceTask(prompt: string, imageUrl: string | null): Promi
   });
 
   const taskData = await taskResponse.json() as any;
+  console.log("Seedance task response:", JSON.stringify(taskData));
 
   if (!taskResponse.ok || taskData.code !== 200) {
     throw new Error(`Seedance API error: ${taskData.msg || JSON.stringify(taskData)}`);
@@ -214,8 +229,8 @@ async function startSeedanceTasksPerImage(
 
   for (let i = 0; i < imageUrls.length; i++) {
     const imageUrl = imageUrls[i];
-    const shotPrompt = buildShotPrompt(basePrompt, shotPrompts[i] || "");
-    const taskId = await startSeedanceTask(shotPrompt, imageUrl);
+    const anchoredPrompt = buildImageAnchoredPrompt(basePrompt, shotPrompts[i] || "");
+    const taskId = await startSeedanceTask(anchoredPrompt, imageUrl);
     taskIds.push(taskId);
     if (i < imageUrls.length - 1) {
       await new Promise(r => setTimeout(r, 500));
