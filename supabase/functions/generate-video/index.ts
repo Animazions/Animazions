@@ -204,6 +204,11 @@ function truncatePrompt(prompt: string, maxLength = 500): string {
   return lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated;
 }
 
+function buildSeedancePrompt(prompt: string): string {
+  const languagePrefix = hasLanguageSpecified(prompt) ? "" : "[IMPORTANT: All speech, dialogue, narration and audio MUST be in English only] ";
+  return truncatePrompt(`${languagePrefix}${prompt}`);
+}
+
 async function startSeedanceTask(prompt: string, imageUrl: string | null): Promise<string> {
   const kieApiKey = Deno.env.get("KIE_AI_API_KEY");
   if (!kieApiKey) {
@@ -211,7 +216,7 @@ async function startSeedanceTask(prompt: string, imageUrl: string | null): Promi
   }
 
   const inputPayload: Record<string, unknown> = {
-    prompt: truncatePrompt(prompt),
+    prompt: buildSeedancePrompt(prompt),
     aspect_ratio: "16:9",
     resolution: "720p",
     duration: "4",

@@ -61,6 +61,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
   const [createProjectError, setCreateProjectError] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<'image' | 'video' | null>(null);
+  const cancelImageRef = useRef(false);
+  const cancelVideoRef = useRef(false);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -172,6 +176,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       const klingPending = pendingTasks.filter(t => t.model === 'kling').map(t => t.task_id);
 
       if (seedancePending.length > 0) {
+        cancelVideoRef.current = false;
         setSeedanceTaskIds(seedancePending);
         setSeedancePollStatus(`Resuming ${seedancePending.length} pending clip${seedancePending.length > 1 ? 's' : ''}...`);
         setGeneratingVideo(true);
@@ -180,6 +185,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       }
 
       if (klingPending.length > 0) {
+        cancelVideoRef.current = false;
         const taskId = klingPending[0];
         setKlingTaskId(taskId);
         setKlingPolling(true);
@@ -417,6 +423,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       return;
     }
 
+    cancelImageRef.current = false;
     setGeneratingImage(true);
     setShowImageWaitMessage(true);
     setImageGenError('');
@@ -479,6 +486,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
         while (attempts < maxAttempts) {
           await new Promise(r => setTimeout(r, 3000));
+          if (cancelImageRef.current) return;
           attempts++;
 
           const statusRes = await fetch(`${supabaseUrl}/functions/v1/check-image-status`, {
@@ -584,6 +592,13 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
     while (attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 5000));
+      if (cancelVideoRef.current) {
+        setKlingPolling(false);
+        setKlingPollStatus('');
+        setShowVideoWaitMessage(false);
+        setGeneratingVideo(false);
+        return;
+      }
       attempts++;
 
       setKlingPollStatus(`Checking status... (attempt ${attempts}/${maxAttempts})`);
@@ -598,7 +613,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         const statusData = await statusRes.json();
 
         if (statusData.status === 'success' && statusData.videoUrl) {
-          setGeneratedVideos(prev => [...prev, statusData.videoUrl]);
+          setGeneratedVideos(prev => prev.includes(statusData.videoUrl) ? prev : [...prev, statusData.videoUrl]);
           setKlingTaskId(null);
           setKlingPollStatus('');
           setKlingPolling(false);
@@ -648,6 +663,13 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
     while (pending.size > 0 && attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 5000));
+      if (cancelVideoRef.current) {
+        setSeedanceTaskIds([]);
+        setSeedancePollStatus('');
+        setShowVideoWaitMessage(false);
+        setGeneratingVideo(false);
+        return;
+      }
       attempts++;
       setSeedancePollStatus(`Generating clips from storyboard... (${taskIds.length - pending.size}/${taskIds.length} complete, attempt ${attempts})`);
 
@@ -751,6 +773,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       setShowSignUpNudge(true);
     }
 
+    cancelVideoRef.current = false;
     setGeneratingVideo(true);
     setShowVideoWaitMessage(true);
     setVideoGenError('');
@@ -1543,23 +1566,34 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </div>
           )}
 
-          <button
-            onClick={handleGenerateImage}
-            disabled={generatingImage}
-            className="mt-6 bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
-          >
-            {generatingImage ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Generate Image
-              </>
+          <div className="mt-6 flex items-center gap-3">
+            <button
+              onClick={handleGenerateImage}
+              disabled={generatingImage}
+              className="bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+            >
+              {generatingImage ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate Image
+                </>
+              )}
+            </button>
+            {generatingImage && (
+              <button
+                onClick={() => { setCancelTarget('image'); setShowCancelConfirm(true); }}
+                className="px-5 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider border border-gray-600 hover:border-red-500 text-gray-300 hover:text-red-400 transition-all flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </button>
             )}
-          </button>
+          </div>
 
           {showImageWaitMessage && (
             <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-start gap-2">
@@ -1849,23 +1883,34 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             </div>
           )}
 
-          <button
-            onClick={handleGenerateVideo}
-            disabled={generatingVideo}
-            className="bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
-          >
-            {generatingVideo ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                Generating Video...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Generate Video
-              </>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGenerateVideo}
+              disabled={generatingVideo}
+              className="bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+            >
+              {generatingVideo ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Generating Video...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate Video
+                </>
+              )}
+            </button>
+            {generatingVideo && (
+              <button
+                onClick={() => { setCancelTarget('video'); setShowCancelConfirm(true); }}
+                className="px-5 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider border border-gray-600 hover:border-red-500 text-gray-300 hover:text-red-400 transition-all flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </button>
             )}
-          </button>
+          </div>
 
           {showVideoWaitMessage && !klingTaskId && (
             <div className="mt-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-start gap-2">
@@ -2178,6 +2223,48 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
         </div>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+            <h3 className="font-krona text-lg mb-3 text-white">Cancel Generation?</h3>
+            <p className="text-gray-400 font-jost text-sm mb-6">
+              Are you sure you want to cancel the {cancelTarget === 'image' ? 'image' : 'video'} generation? Any progress will be lost.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (cancelTarget === 'image') {
+                    cancelImageRef.current = true;
+                    setGeneratingImage(false);
+                    setShowImageWaitMessage(false);
+                  } else if (cancelTarget === 'video') {
+                    cancelVideoRef.current = true;
+                    setGeneratingVideo(false);
+                    setShowVideoWaitMessage(false);
+                    setKlingPolling(false);
+                    setKlingPollStatus('');
+                    setSeedancePollStatus('');
+                    setSeedanceTaskIds([]);
+                  }
+                  setShowCancelConfirm(false);
+                  setCancelTarget(null);
+                }}
+                className="flex-1 bg-[#E70606] hover:bg-[#c00505] px-4 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all"
+              >
+                Yes, Cancel
+              </button>
+              <button
+                onClick={() => { setShowCancelConfirm(false); setCancelTarget(null); }}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-600 px-4 py-3 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all"
+              >
+                Keep Waiting
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
