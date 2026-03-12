@@ -1822,6 +1822,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400 mb-2">
               Describe Your Video
             </label>
+            <p className="font-jost text-xs text-gray-500 mb-3 leading-relaxed">
+              The AI Video model will animate 1 image/panel at a time. Please make sure you clearly state each image/panel (For example; Image 1 or Panel 3) and the prompt to go with it. Prompting tutorials and guides can be found in the{' '}
+              <span className="text-[#E70606] font-medium">'Guides and Tutorials'</span> page.
+            </p>
             <textarea
               value={videoPrompt}
               onChange={(e) => setVideoPrompt(e.target.value)}
