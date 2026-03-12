@@ -15,6 +15,7 @@ interface VideoGenerationRequest {
   storyboardPrompts?: string[];
   duration?: 5 | 10 | 15;
   userId: string;
+  projectId?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -32,6 +33,7 @@ Deno.serve(async (req: Request) => {
       storyboardPrompts = [],
       duration = 5,
       userId,
+      projectId,
     } = body;
 
     if (!prompt || !model) {
@@ -57,6 +59,13 @@ Deno.serve(async (req: Request) => {
     if (model === "Kling 3.0") {
       const enhancedPrompt = buildEnhancedPrompt(prompt, storyboardImageUrls, moodboardImageUrls, storyboardPrompts);
       const klingTaskId = await startKlingTask(enhancedPrompt, duration, storyboardImageUrls, storyboardPrompts);
+      await supabase.from("pending_video_tasks").insert({
+        user_id: userId,
+        project_id: projectId || null,
+        task_id: klingTaskId,
+        model: "kling",
+        status: "pending",
+      });
       return new Response(
         JSON.stringify({ taskId: klingTaskId }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -66,12 +75,28 @@ Deno.serve(async (req: Request) => {
     if (model === "Seedance 1.5 Pro (FREE)") {
       if (hasStoryboardImages) {
         const taskIds = await startSeedanceTasksPerImage(prompt, storyboardImageUrls, storyboardPrompts);
+        await Promise.all(taskIds.map(taskId =>
+          supabase.from("pending_video_tasks").insert({
+            user_id: userId,
+            project_id: projectId || null,
+            task_id: taskId,
+            model: "seedance",
+            status: "pending",
+          })
+        ));
         return new Response(
           JSON.stringify({ taskIds, model: "seedance" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
         const taskId = await startSeedanceTask(prompt, null);
+        await supabase.from("pending_video_tasks").insert({
+          user_id: userId,
+          project_id: projectId || null,
+          task_id: taskId,
+          model: "seedance",
+          status: "pending",
+        });
         return new Response(
           JSON.stringify({ taskIds: [taskId], model: "seedance" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -181,7 +206,7 @@ async function startSeedanceTask(prompt: string, imageUrl: string | null): Promi
     prompt: truncatePrompt(prompt),
     aspect_ratio: "16:9",
     resolution: "720p",
-    duration: "8",
+    duration: "4",
     fixed_lens: false,
     generate_audio: true,
   };

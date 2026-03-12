@@ -30,6 +30,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const statusResponse = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
       method: "GET",
       headers: {
@@ -48,6 +52,12 @@ Deno.serve(async (req: Request) => {
     const state = statusData.data?.state;
 
     if (state === "fail") {
+      await supabase
+        .from("pending_video_tasks")
+        .update({ status: "failed", updated_at: new Date().toISOString() })
+        .eq("task_id", taskId)
+        .eq("user_id", userId);
+
       return new Response(
         JSON.stringify({ status: "failed", error: statusData.data?.failMsg || "Task failed" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -95,11 +105,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: taskRow } = await supabase
+      .from("pending_video_tasks")
+      .select("model, project_id")
+      .eq("task_id", taskId)
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    const fileName = `${userId}/${Date.now()}_clip_kling.mp4`;
+    const modelLabel = taskRow?.model || "clip";
+    const fileName = `${userId}/${Date.now()}_clip_${modelLabel}.mp4`;
+
     const { error: uploadError } = await supabase.storage
       .from("generated-videos")
       .upload(fileName, new Uint8Array(buffer), {
@@ -125,8 +140,38 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const signedUrl = signedData.signedUrl;
+
+    await supabase
+      .from("pending_video_tasks")
+      .update({ status: "success", video_url: signedUrl, updated_at: new Date().toISOString() })
+      .eq("task_id", taskId)
+      .eq("user_id", userId);
+
+    const projectId = taskRow?.project_id;
+    if (projectId) {
+      const { data: projectData } = await supabase
+        .from("projects")
+        .select("state")
+        .eq("id", projectId)
+        .maybeSingle();
+
+      if (projectData?.state) {
+        const existingVideos: string[] = projectData.state.generatedVideos || [];
+        if (!existingVideos.includes(signedUrl)) {
+          await supabase
+            .from("projects")
+            .update({
+              state: { ...projectData.state, generatedVideos: [...existingVideos, signedUrl] },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", projectId);
+        }
+      }
+    }
+
     return new Response(
-      JSON.stringify({ status: "success", videoUrl: signedData.signedUrl }),
+      JSON.stringify({ status: "success", videoUrl: signedUrl }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

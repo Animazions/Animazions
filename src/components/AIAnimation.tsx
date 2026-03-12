@@ -156,6 +156,42 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     };
   }, [projectId, saveProject]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const resumePendingTasks = async () => {
+      const { data: pendingTasks } = await supabase
+        .from('pending_video_tasks')
+        .select('task_id, model')
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+
+      if (!pendingTasks || pendingTasks.length === 0) return;
+
+      const seedancePending = pendingTasks.filter(t => t.model === 'seedance').map(t => t.task_id);
+      const klingPending = pendingTasks.filter(t => t.model === 'kling').map(t => t.task_id);
+
+      if (seedancePending.length > 0) {
+        setSeedanceTaskIds(seedancePending);
+        setSeedancePollStatus(`Resuming ${seedancePending.length} pending clip${seedancePending.length > 1 ? 's' : ''}...`);
+        setGeneratingVideo(true);
+        setShowVideoWaitMessage(true);
+        pollSeedanceTasks(seedancePending);
+      }
+
+      if (klingPending.length > 0) {
+        const taskId = klingPending[0];
+        setKlingTaskId(taskId);
+        setKlingPolling(true);
+        setKlingPollStatus('Resuming Kling AI video generation...');
+        setGeneratingVideo(true);
+        pollKlingTaskStatus(taskId);
+      }
+    };
+
+    resumePendingTasks();
+  }, [user]);
+
   const captureFrame = useCallback((index: number) => {
     const video = videoRefs.current[index];
     if (!video) return;
@@ -625,7 +661,10 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           });
           const data = await res.json();
           if (data.status === 'success' && data.videoUrl) {
-            setGeneratedVideos(prev => [...prev, data.videoUrl]);
+            setGeneratedVideos(prev => {
+              if (prev.includes(data.videoUrl)) return prev;
+              return [...prev, data.videoUrl];
+            });
             toRemove.push(taskId);
           } else if (data.status === 'failed') {
             toRemove.push(taskId);
@@ -753,8 +792,9 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           storyboardImageUrls: validStoryboardUrls,
           moodboardImageUrls: validMoodboardUrls,
           storyboardPrompts: storyboardImagePrompts,
-          duration: clipDuration,
+          duration: selectedVideoModel === 'Seedance 1.5 Pro (FREE)' ? 4 : clipDuration,
           userId: user?.id ?? null,
+          projectId: projectId ?? null,
         }),
       });
 
@@ -1609,7 +1649,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           </div>
 
           <p className="text-gray-400 font-jost mb-4 text-sm">
-            AI Video models will generate videos per image in the order you place your images in the storyboard. It is recommended to use 5 to 10 seconds video duration generation per image whilst you improve your prompting skills. It is recommended to ensure your storyboard images flow well so when you join your videos together it will create a fluid and consistent long form video.
+            AI Video models will generate videos per image in the order you place your images in the storyboard. It is recommended to use 5 to 10 seconds video duration generation per image whilst you improve your prompting skills. It is recommended to ensure your storyboard images flow well so when you join your videos together it will create a fluid and consistent long form video. As a beginner it is best to start with 1 image only.
           </p>
 
           <div
@@ -1760,32 +1800,42 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
             <label className="block font-chakra text-sm uppercase tracking-wider text-gray-400 mb-3">
               Video Duration
             </label>
-            <div className="flex gap-3">
-              {[5, 10, 15].map((duration) => {
-                const isSeedance = selectedVideoModel === 'Seedance 1.5 Pro (FREE)';
-                const isKling = selectedVideoModel === 'Kling 3.0';
-                const isDisabled = (isSeedance && (duration === 10 || duration === 15)) || (isKling && duration === 15);
-                return (
-                  <button
-                    key={duration}
-                    onClick={() => !isDisabled && setClipDuration(duration as 5 | 10 | 15)}
-                    disabled={isDisabled}
-                    className={`px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all ${
-                      isDisabled
-                        ? 'bg-gray-900 text-gray-600 border border-gray-700 cursor-not-allowed opacity-50'
-                        : clipDuration === duration
-                        ? 'bg-[#E70606] text-white'
-                        : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#E70606]'
-                    }`}
-                    title={isDisabled ? (isSeedance ? 'Seedance 1.5 Pro only supports 5s duration' : 'Kling 3.0 supports up to 10s duration') : ''}
-                  >
-                    {duration}s
-                  </button>
-                );
-              })}
-            </div>
+            {selectedVideoModel === 'Seedance 1.5 Pro (FREE)' ? (
+              <div className="flex gap-3">
+                <button
+                  disabled
+                  className="px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider bg-[#E70606] text-white cursor-default"
+                >
+                  4s
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                {[5, 10, 15].map((duration) => {
+                  const isKling = selectedVideoModel === 'Kling 3.0';
+                  const isDisabled = isKling && duration === 15;
+                  return (
+                    <button
+                      key={duration}
+                      onClick={() => !isDisabled && setClipDuration(duration as 5 | 10 | 15)}
+                      disabled={isDisabled}
+                      className={`px-6 py-2 rounded-lg font-chakra text-sm uppercase tracking-wider transition-all ${
+                        isDisabled
+                          ? 'bg-gray-900 text-gray-600 border border-gray-700 cursor-not-allowed opacity-50'
+                          : clipDuration === duration
+                          ? 'bg-[#E70606] text-white'
+                          : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-[#E70606]'
+                      }`}
+                      title={isDisabled ? 'Kling 3.0 supports up to 10s duration' : ''}
+                    >
+                      {duration}s
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {selectedVideoModel === 'Seedance 1.5 Pro (FREE)' && (
-              <p className="text-xs text-gray-500 mt-2">Seedance 1.5 Pro only supports 5 second videos</p>
+              <p className="text-xs text-gray-500 mt-2">Seedance 1.5 Pro generates 4 second videos with audio</p>
             )}
             {selectedVideoModel === 'Kling 3.0' && (
               <p className="text-xs text-gray-500 mt-2">Kling 3.0 supports up to 10 second videos</p>
