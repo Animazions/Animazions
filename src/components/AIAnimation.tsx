@@ -1746,7 +1746,13 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setStoryboardImages(prev => [...prev, generatedImage].slice(0, getStoryboardSlots()));
+                      setStoryboardImages(prev => {
+                        const combined = [...prev, generatedImage];
+                        if (combined.length > getStoryboardSlots()) {
+                          setCustomPanels(combined.length);
+                        }
+                        return combined;
+                      });
                       setStoryboardImagePrompts(prev => [...prev, imagePrompt]);
                     }}
                     className="text-xs font-chakra uppercase tracking-wider text-[#E70606] hover:text-red-400 transition border border-[#E70606] hover:border-red-400 px-3 py-1.5 rounded-lg"
