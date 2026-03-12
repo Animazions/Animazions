@@ -433,6 +433,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     setImageGenError('');
     setGeneratedImage(null);
 
+    if (user && !projectId) setShowSaveProjectNudge(true);
+
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -978,6 +980,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
         }
         if (!user) {
           setShowSignUpNudge(true);
+        } else if (!projectId) {
+          setShowSaveProjectNudge(true);
         }
       }
     };
@@ -1613,7 +1617,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           </p>
         </div>
 
-        {nudgeDismissed && !projectId && (
+        {!projectId && (storyboardImages.length > 0 || imagePrompt || generatedImage || generatedVideos.length > 0 || videoPrompt) && (nudgeDismissed || !!user) && (
           <div className="mb-6 flex items-center justify-between gap-4 bg-gray-900 border border-gray-700 rounded-xl px-5 py-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 bg-[#E70606]/20 border border-[#E70606]/40 rounded-lg flex items-center justify-center shrink-0">
@@ -2374,7 +2378,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           )}
         </section>
 
-        {nudgeDismissed && !projectId && (
+        {!projectId && (storyboardImages.length > 0 || imagePrompt || generatedImage || generatedVideos.length > 0 || videoPrompt) && (nudgeDismissed || !!user) && (
           <div className="mb-10 flex items-center justify-between gap-4 bg-gray-900 border border-gray-700 rounded-xl px-5 py-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 bg-[#E70606]/20 border border-[#E70606]/40 rounded-lg flex items-center justify-center shrink-0">
