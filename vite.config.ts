@@ -21,6 +21,18 @@ prepareSafePublic();
 export default defineConfig({
   publicDir: safePublicDir,
   plugins: [react()],
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  preview: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
   resolve: {
     dedupe: ['react', 'react-dom', 'ethers'],
     alias: {
@@ -31,7 +43,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    exclude: ['lucide-react', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
     include: [
       '@thirdweb-dev/react',
       '@thirdweb-dev/react-core',
