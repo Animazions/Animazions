@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { X, Download, Loader, Film, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import JSZip from 'jszip';
 
 interface VideoExportModalProps {
   videoSequence: string[];
@@ -35,27 +34,6 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const fetchVideoBlob = async (url: string, index: number): Promise<Blob> => {
-    const isSupabaseStorage = url.includes('/storage/v1/object/sign/') || url.includes('/storage/v1/object/public/');
-
-    if (isSupabaseStorage) {
-      const pathMatch = url.match(/\/storage\/v1\/object\/(?:sign|public)\/generated-videos\/(.+?)(?:\?|$)/);
-      if (pathMatch) {
-        const filePath = decodeURIComponent(pathMatch[1]);
-        const { data, error: dlError } = await supabase.storage
-          .from('generated-videos')
-          .download(filePath);
-        if (dlError) throw new Error(`Failed to download video ${index + 1}: ${dlError.message}`);
-        if (!data) throw new Error(`No data for video ${index + 1}`);
-        return data;
-      }
-    }
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch video ${index + 1}: ${res.status} ${res.statusText}`);
-    return res.blob();
-  };
-
   const handleExport = async () => {
     cancelledRef.current = false;
     setCancelled(false);
@@ -64,46 +42,43 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
     setProgress(0);
 
     try {
-      if (videoSequence.length === 1) {
-        setStatus('Downloading video...');
-        setProgress(20);
-        const blob = await fetchVideoBlob(videoSequence[0], 0);
-        if (cancelledRef.current) return;
-        setProgress(90);
-        setStatus('Preparing download...');
-        downloadBlob(blob, `animation_${Date.now()}.mp4`);
-        setProgress(100);
-        setStatus('Done!');
-        setTimeout(() => onClose(), 1200);
-        return;
-      }
+      setStatus(videoSequence.length === 1 ? 'Downloading video...' : 'Joining clips...');
+      setProgress(20);
 
-      const blobs: Blob[] = [];
-      for (let i = 0; i < videoSequence.length; i++) {
-        if (cancelledRef.current) return;
-        setStatus(`Downloading clip ${i + 1} of ${videoSequence.length}...`);
-        setProgress(Math.round(((i) / videoSequence.length) * 70));
-        const blob = await fetchVideoBlob(videoSequence[i], i);
-        blobs.push(blob);
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const edgeUrl = `${supabaseUrl}/functions/v1/join-videos`;
+
+      setProgress(40);
+
+      const response = await fetch(edgeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ videoUrls: videoSequence }),
+      });
 
       if (cancelledRef.current) return;
-      setStatus('Packaging clips...');
-      setProgress(80);
 
-      if (blobs.length === 1) {
-        downloadBlob(blobs[0], `animation_${Date.now()}.mp4`);
-      } else {
-        const zip = new JSZip();
-        blobs.forEach((blob, i) => {
-          zip.file(`clip_${String(i + 1).padStart(2, '0')}.mp4`, blob);
-        });
-        const zipBlob = await zip.generateAsync({ type: 'blob' }, (meta) => {
-          setProgress(80 + Math.round(meta.percent * 0.2));
-        });
-        if (cancelledRef.current) return;
-        downloadBlob(zipBlob, `animation_clips_${Date.now()}.zip`);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errData.error || `Server error: ${response.status}`);
       }
+
+      setProgress(80);
+      setStatus('Preparing download...');
+
+      const blob = await response.blob();
+
+      if (cancelledRef.current) return;
+
+      setProgress(95);
+      downloadBlob(blob, `animation_${Date.now()}.mp4`);
 
       setProgress(100);
       setStatus('Done!');
@@ -139,13 +114,9 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
         <div className="p-6 space-y-6">
           <div>
             <p className="text-white/60 text-sm">
-              {videoSequence.length} clip{videoSequence.length !== 1 ? 's' : ''} will be exported
+              {videoSequence.length} clip{videoSequence.length !== 1 ? 's' : ''} will be{' '}
+              {videoSequence.length > 1 ? 'joined and exported as a single MP4' : 'exported as MP4'}
             </p>
-            {videoSequence.length > 1 && (
-              <p className="text-white/40 text-xs mt-1">
-                Multiple clips will be packaged as a .zip file
-              </p>
-            )}
           </div>
 
           {exporting && (
@@ -205,7 +176,7 @@ export default function VideoExportModal({ videoSequence, onClose }: VideoExport
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Export {videoSequence.length > 1 ? 'ZIP' : 'MP4'}
+                  Join & Export MP4
                 </>
               )}
             </button>
