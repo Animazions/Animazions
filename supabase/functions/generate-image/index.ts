@@ -17,22 +17,6 @@ const KIE_IMG2IMG_MODEL_MAP: Record<string, string> = {
   "Seedream 5.0 Lite": "seedream/5-lite-image-to-image",
 };
 
-async function fetchImageAsBase64(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const buffer = await res.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  } catch {
-    return null;
-  }
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -98,10 +82,10 @@ CRITICAL: You MUST replicate the exact art style, color palette, character desig
       const img2imgModel = KIE_IMG2IMG_MODEL_MAP[model];
       if (img2imgModel) {
         kieModel = img2imgModel;
-        const base64Image = await fetchImageAsBase64(referenceImageUrl);
-        if (base64Image) {
-          extraInput.image = base64Image;
-          extraInput.image_strength = 0.35;
+        if (model === "Seedream 5.0 Lite") {
+          extraInput.image_urls = [referenceImageUrl];
+        } else if (model === "Nano Banana Pro") {
+          extraInput.image_input = [referenceImageUrl];
         }
       }
     }
@@ -125,7 +109,7 @@ CRITICAL: You MUST replicate the exact art style, color palette, character desig
     const taskData = await taskResponse.json() as any;
 
     if (!taskResponse.ok || taskData.code !== 200) {
-      throw new Error(`KIE.AI error: ${taskData.message || JSON.stringify(taskData)}`);
+      throw new Error(`KIE.AI error: ${taskData.msg || taskData.message || JSON.stringify(taskData)}`);
     }
 
     const taskId = taskData.data?.taskId || taskData.data?.task_id || taskData.taskId;
