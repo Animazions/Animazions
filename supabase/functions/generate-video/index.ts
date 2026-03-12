@@ -206,8 +206,8 @@ function truncatePrompt(prompt: string, maxLength = 500): string {
 
 function buildSeedancePrompt(rawUserPrompt: string): string {
   const userWantsOtherLanguage = /\b(speak|say|narrate|dialogue|audio|voice|language)\s+(in\s+)?(french|spanish|german|italian|portuguese|japanese|chinese|korean|arabic|hindi|russian|dutch|swedish|norwegian|danish|finnish|polish|turkish|greek|hebrew|thai|vietnamese|indonesian|malay|czech|hungarian|romanian|ukrainian)\b/i.test(rawUserPrompt);
-  const languagePrefix = userWantsOtherLanguage ? "" : "SYSTEM: All speech, dialogue, narration, and audio output MUST be in English. Do not generate any non-English speech. ";
-  return truncatePrompt(`${languagePrefix}${rawUserPrompt}`);
+  const languageSuffix = userWantsOtherLanguage ? "" : " All speech and audio must be in English.";
+  return truncatePrompt(`${rawUserPrompt}${languageSuffix}`);
 }
 
 async function startSeedanceTask(prompt: string, imageUrl: string | null): Promise<string> {
