@@ -803,7 +803,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const parsePanelPrompts = (rawPrompt: string): { panelIndex: number; prompt: string }[] => {
     const results: { panelIndex: number; prompt: string }[] = [];
     const lines = rawPrompt.split('\n').map(l => l.trim()).filter(Boolean);
-    const panelLineRegex = /^(?:panel|image|img)\s*#?\s*(\d+)\s*[^\d\s]\s*(.+)/i;
+    const panelLineRegex = /^(?:panel|image|img)\s*#?\s*(\d+)(?:[^\d]|\s+)(.+)/i;
     for (const line of lines) {
       const match = line.match(panelLineRegex);
       if (match) {
