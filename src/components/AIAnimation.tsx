@@ -66,6 +66,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
   const [selectedReferencePanel, setSelectedReferencePanel] = useState<number | null>(null);
   const cancelImageRef = useRef(false);
   const cancelVideoRef = useRef(false);
+  const pendingImageTaskIdRef = useRef<string | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const generatedImagesSectionRef = useRef<HTMLDivElement>(null);
@@ -514,12 +515,16 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
 
       if (data.taskId) {
         const taskId = data.taskId;
+        pendingImageTaskIdRef.current = taskId;
         const maxAttempts = 60;
         let attempts = 0;
 
         while (attempts < maxAttempts) {
           await new Promise(r => setTimeout(r, 3000));
-          if (cancelImageRef.current) return;
+          if (cancelImageRef.current) {
+            pendingImageTaskIdRef.current = null;
+            return;
+          }
           attempts++;
 
           const statusRes = await fetch(`${supabaseUrl}/functions/v1/check-image-status`, {
@@ -535,6 +540,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           }
 
           if (statusData.status === 'success' && statusData.imageUrl) {
+            pendingImageTaskIdRef.current = null;
             setGeneratedImage(statusData.imageUrl);
             setShowImageWaitMessage(false);
             if (!user) setShowSignUpNudge(true);
@@ -545,10 +551,12 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           }
 
           if (statusData.status === 'failed') {
+            pendingImageTaskIdRef.current = null;
             throw new Error(statusData.error || 'Image generation failed on the server.');
           }
         }
 
+        pendingImageTaskIdRef.current = null;
         throw new Error('Image generation timed out. The image may still be processing — please try again shortly.');
       }
 
@@ -557,6 +565,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       setImageGenError(err?.message || 'Image generation failed. Please try again.');
       setShowImageWaitMessage(false);
     } finally {
+      pendingImageTaskIdRef.current = null;
       setGeneratingImage(false);
     }
   };
@@ -784,6 +793,27 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
     }
   };
 
+  const parsePanelPrompts = (rawPrompt: string, numPanels: number): string[] => {
+    const panelMap: Record<number, string> = {};
+    const regex = /(?:panel|image|img)\s*#?\s*(\d+)\s*[:\-]\s*([\s\S]*?)(?=(?:panel|image|img)\s*#?\s*\d+\s*[:\-]|$)/gi;
+    let match;
+    while ((match = regex.exec(rawPrompt)) !== null) {
+      const num = parseInt(match[1], 10);
+      const promptText = match[2].trim().replace(/,\s*$/, '').trim();
+      if (num >= 1 && promptText) {
+        panelMap[num] = promptText;
+      }
+    }
+    const hasPanelPrompts = Object.keys(panelMap).length > 0;
+    if (!hasPanelPrompts) {
+      return Array(numPanels).fill(rawPrompt);
+    }
+    return Array.from({ length: numPanels }, (_, i) => {
+      const panelNum = i + 1;
+      return panelMap[panelNum] || rawPrompt;
+    });
+  };
+
   const handleGenerateVideo = async () => {
     if (!videoPrompt.trim()) {
       setVideoGenError('Please enter a video description first.');
@@ -835,6 +865,8 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
       const validStoryboardUrls = storyboardPublicUrls.filter(Boolean) as string[];
       const validMoodboardUrls = moodboardPublicUrls.filter(Boolean) as string[];
 
+      const perPanelPrompts = parsePanelPrompts(videoPrompt, validStoryboardUrls.length);
+
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video`, {
         method: 'POST',
         headers: {
@@ -847,7 +879,7 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           model: selectedVideoModel,
           storyboardImageUrls: validStoryboardUrls,
           moodboardImageUrls: validMoodboardUrls,
-          storyboardPrompts: storyboardImagePrompts,
+          storyboardPrompts: perPanelPrompts,
           duration: selectedVideoModel === 'Seedance 1.5 Pro (FREE)' ? 4 : clipDuration,
           userId: user?.id ?? null,
           projectId: projectId ?? null,
@@ -1912,15 +1944,45 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
               Describe Your Video
             </label>
             <p className="font-jost text-xs text-gray-500 mb-3 leading-relaxed">
-              The AI Video model will animate 1 image/panel at a time. Please make sure you clearly state each image/panel (For example; Image 1 or Panel 3) and the prompt to go with it. Prompting tutorials and guides can be found in the{' '}
-              <span className="text-[#E70606] font-medium">'Guides and Tutorials'</span> page.
+              The AI Video model animates one image/panel at a time. You can write a single prompt for all panels, or target individual panels by number.
+              For example: <span className="text-gray-400 font-medium">"Panel 1: slow zoom in on the hero, Panel 2: the city erupts in flames, Panel 3: wide aerial shot"</span>.
+              Any panel without a specific prompt will use the general description. Tutorials are in the <span className="text-[#E70606] font-medium">'Guides and Tutorials'</span> page.
             </p>
             <textarea
               value={videoPrompt}
               onChange={(e) => setVideoPrompt(e.target.value)}
-              placeholder="Describe the video animation you want to generate... (e.g., 'Smooth camera pan across a cyberpunk city with animated characters walking')"
-              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white placeholder:text-gray-600 focus:outline-none focus:border-[#E70606] transition-colors resize-none h-32"
+              placeholder={storyboardImages.length > 1 ? `Describe each panel's animation (e.g. "Panel 1: slow zoom on character, Panel 2: city erupts in flames, Panel 3: hero runs left") — or write one description for all panels.` : "Describe the video animation you want to generate... (e.g., 'Smooth camera pan across a cyberpunk city with animated characters walking')"}
+              className="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 font-jost text-white placeholder:text-gray-600 focus:outline-none focus:border-[#E70606] transition-colors resize-none h-36"
             />
+            {storyboardImages.length > 1 && videoPrompt.trim() && (() => {
+              const parsed = parsePanelPrompts(videoPrompt, storyboardImages.length);
+              const hasCustom = parsed.some((p, i) => i > 0 && p !== parsed[0]);
+              if (!hasCustom) return null;
+              return (
+                <div className="mt-3 bg-gray-900 border border-gray-700 rounded-lg p-4">
+                  <p className="font-chakra text-xs uppercase tracking-wider text-gray-400 mb-3">Panel Prompts Preview</p>
+                  <div className="space-y-2">
+                    {parsed.map((panelPrompt, i) => (
+                      <div key={i} className="flex gap-3 items-start">
+                        <div className="flex-shrink-0 w-16 h-10 rounded overflow-hidden border border-gray-700">
+                          {storyboardImages[i] ? (
+                            <img src={storyboardImages[i]} alt={`Panel ${i + 1}`} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                              <span className="font-krona text-gray-600 text-xs">{i + 1}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-chakra text-xs text-[#E70606] mb-0.5">Panel {i + 1}</p>
+                          <p className="font-jost text-xs text-gray-300 leading-relaxed truncate">{panelPrompt}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="mb-6">
@@ -2323,23 +2385,46 @@ export function AIAnimation({ onNavigate, projectId }: AIAnimationProps) {
           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-sm w-full shadow-2xl">
             <h3 className="font-krona text-lg mb-3 text-white">Cancel Generation?</h3>
             <p className="text-gray-400 font-jost text-sm mb-6">
-              Are you sure you want to cancel the {cancelTarget === 'image' ? 'image' : 'video'} generation? Any progress will be lost.
+              The {cancelTarget === 'image' ? 'image' : 'video'} generation will be cancelled and your prompt will be cleared.
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (cancelTarget === 'image') {
                     cancelImageRef.current = true;
+                    const imageTaskId = pendingImageTaskIdRef.current;
+                    if (imageTaskId && user) {
+                      try {
+                        await supabase.from('pending_video_tasks').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('task_id', imageTaskId).eq('user_id', user.id);
+                      } catch {}
+                    }
+                    pendingImageTaskIdRef.current = null;
                     setGeneratingImage(false);
                     setShowImageWaitMessage(false);
+                    setImageGenError('');
+                    setImagePrompt('');
                   } else if (cancelTarget === 'video') {
                     cancelVideoRef.current = true;
+                    if (user) {
+                      const taskIdsToCancel = [
+                        ...(klingTaskId ? [klingTaskId] : []),
+                        ...seedanceTaskIds,
+                      ];
+                      if (taskIdsToCancel.length > 0) {
+                        try {
+                          await supabase.from('pending_video_tasks').update({ status: 'failed', updated_at: new Date().toISOString() }).in('task_id', taskIdsToCancel).eq('user_id', user.id);
+                        } catch {}
+                      }
+                    }
                     setGeneratingVideo(false);
                     setShowVideoWaitMessage(false);
                     setKlingPolling(false);
                     setKlingPollStatus('');
+                    setKlingTaskId(null);
                     setSeedancePollStatus('');
                     setSeedanceTaskIds([]);
+                    setVideoGenError('');
+                    setVideoPrompt('');
                   }
                   setShowCancelConfirm(false);
                   setCancelTarget(null);

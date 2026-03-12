@@ -278,6 +278,13 @@ async function startSeedanceTasksPerImage(
   return taskIds;
 }
 
+function buildShotPrompt(basePrompt: string, panelSpecificPrompt: string): string {
+  const mandate = "animated cartoon style, 2D or 3D animation only, NOT photorealistic, NOT live-action";
+  const languageNote = hasLanguageSpecified(basePrompt) ? "" : " All spoken dialogue, narration, and audio must be in English.";
+  const direction = panelSpecificPrompt || basePrompt;
+  return truncatePrompt(`${mandate}. ${direction}.${languageNote} Use the provided reference image as the ONLY visual source — replicate all characters, backgrounds, colors, and art style exactly.`);
+}
+
 async function startKlingTask(
   prompt: string,
   duration: number,
