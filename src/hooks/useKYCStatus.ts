@@ -53,7 +53,10 @@ export function useKYCStatus() {
       );
 
       const data = await res.json();
-      if (!res.ok) return { session_url: null, error: data.error ?? 'Failed to start KYC' };
+      if (!res.ok) {
+        const detail = data.details ? ` (${data.details})` : '';
+        return { session_url: null, error: (data.error ?? 'Failed to start KYC') + detail };
+      }
 
       await fetchKYCStatus();
       return { session_url: data.session_url, error: null };
