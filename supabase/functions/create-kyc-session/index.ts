@@ -44,23 +44,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const requestBody = {
+      workflow_id: DIDIT_WORKFLOW_ID,
+      vendor_data: user.id,
+    };
+
     const sessionRes = await fetch("https://verification.didit.me/v3/session/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": DIDIT_APP_KEY,
       },
-      body: JSON.stringify({
-        workflow_id: DIDIT_WORKFLOW_ID,
-        callback: `${Deno.env.get("SUPABASE_URL")}/functions/v1/didit-webhook`,
-        vendor_data: user.id,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const sessionText = await sessionRes.text();
+
     if (!sessionRes.ok) {
       return new Response(
-        JSON.stringify({ error: `Didit session failed [${sessionRes.status}]: ${sessionText}` }),
+        JSON.stringify({
+          error: `Didit API error [${sessionRes.status}]`,
+          details: sessionText,
+          request_body: requestBody,
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -70,7 +76,17 @@ Deno.serve(async (req: Request) => {
       sessionData = JSON.parse(sessionText);
     } catch {
       return new Response(
-        JSON.stringify({ error: `Didit session non-JSON: ${sessionText}` }),
+        JSON.stringify({ error: `Didit returned non-JSON`, details: sessionText }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const sessionId = (sessionData.session_id ?? sessionData.id) as string | undefined;
+    const sessionUrl = (sessionData.url ?? sessionData.verification_url ?? sessionData.session_url) as string | undefined;
+
+    if (!sessionUrl) {
+      return new Response(
+        JSON.stringify({ error: "Didit did not return a session URL", details: JSON.stringify(sessionData) }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -84,16 +100,13 @@ Deno.serve(async (req: Request) => {
       .from("user_profiles")
       .upsert({
         id: user.id,
-        kyc_session_id: sessionData.session_id ?? sessionData.id,
+        kyc_session_id: sessionId,
         kyc_status: "pending",
         updated_at: new Date().toISOString(),
       }, { onConflict: "id" });
 
     return new Response(
-      JSON.stringify({
-        session_id: sessionData.session_id ?? sessionData.id,
-        session_url: sessionData.verification_url ?? sessionData.url ?? sessionData.session_url,
-      }),
+      JSON.stringify({ session_id: sessionId, session_url: sessionUrl }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: unknown) {

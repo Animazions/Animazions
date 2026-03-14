@@ -54,7 +54,7 @@ export function useKYCStatus() {
 
       const data = await res.json();
       if (!res.ok) {
-        const detail = data.details ? ` (${data.details})` : '';
+        const detail = data.details ? ` — ${data.details}` : '';
         return { session_url: null, error: (data.error ?? 'Failed to start KYC') + detail };
       }
 
