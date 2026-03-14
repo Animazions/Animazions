@@ -28,7 +28,7 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showKYC, setShowKYC] = useState(false);
 
-  const { kycStatus, startKYCSession, refetch } = useKYCStatus();
+  const { kycStatus, kycSessionUrl, startKYCSession, refetch } = useKYCStatus();
 
   useEffect(() => {
     if (!user) return;
@@ -141,7 +141,7 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
         <div className="max-w-[1440px] mx-auto">
           {user && (
             <div className="mb-6">
-              <KYCStatusBanner kycStatus={kycStatus} onStartKYC={() => setShowKYC(true)} />
+              <KYCStatusBanner kycStatus={kycStatus} kycSessionUrl={kycSessionUrl} onStartKYC={() => setShowKYC(true)} />
             </div>
           )}
 

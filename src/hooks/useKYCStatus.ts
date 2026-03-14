@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
-export type KYCStatus = 'not_started' | 'pending' | 'approved' | 'rejected';
+export type KYCStatus = 'not_started' | 'initiated' | 'pending' | 'approved' | 'rejected';
 
 interface KYCProfile {
   kyc_verified: boolean;
   kyc_status: KYCStatus;
   kyc_session_id: string | null;
+  kyc_session_url: string | null;
   kyc_completed_at: string | null;
 }
 
@@ -24,11 +25,11 @@ export function useKYCStatus() {
     setLoading(true);
     const { data } = await supabase
       .from('user_profiles')
-      .select('kyc_verified, kyc_status, kyc_session_id, kyc_completed_at')
+      .select('kyc_verified, kyc_status, kyc_session_id, kyc_session_url, kyc_completed_at')
       .eq('id', user.id)
       .maybeSingle();
 
-    setKycProfile(data ?? { kyc_verified: false, kyc_status: 'not_started', kyc_session_id: null, kyc_completed_at: null });
+    setKycProfile(data ?? { kyc_verified: false, kyc_status: 'not_started', kyc_session_id: null, kyc_session_url: null, kyc_completed_at: null });
     setLoading(false);
   }, [user]);
 
@@ -81,6 +82,7 @@ export function useKYCStatus() {
     loading,
     isVerified: kycProfile?.kyc_verified ?? false,
     kycStatus: kycProfile?.kyc_status ?? 'not_started',
+    kycSessionUrl: kycProfile?.kyc_session_url ?? null,
     refetch: fetchKYCStatus,
     startKYCSession,
   };

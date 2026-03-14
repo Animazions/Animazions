@@ -1,12 +1,13 @@
-import { ShieldCheck, ShieldX, Clock, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, ShieldX, Clock, AlertTriangle, ExternalLink } from 'lucide-react';
 import { KYCStatus } from '../hooks/useKYCStatus';
 
 interface KYCStatusBannerProps {
   kycStatus: KYCStatus;
+  kycSessionUrl?: string | null;
   onStartKYC: () => void;
 }
 
-export function KYCStatusBanner({ kycStatus, onStartKYC }: KYCStatusBannerProps) {
+export function KYCStatusBanner({ kycStatus, kycSessionUrl, onStartKYC }: KYCStatusBannerProps) {
   if (kycStatus === 'approved') {
     return (
       <div className="flex items-center gap-3 bg-green-900/20 border border-green-700 rounded-xl px-5 py-4">
@@ -15,6 +16,38 @@ export function KYCStatusBanner({ kycStatus, onStartKYC }: KYCStatusBannerProps)
           <p className="text-green-400 font-chakra text-sm uppercase font-bold tracking-wider">KYC Verified</p>
           <p className="text-green-300/70 text-xs mt-0.5">Your identity has been successfully verified</p>
         </div>
+      </div>
+    );
+  }
+
+  if (kycStatus === 'initiated') {
+    return (
+      <div className="flex items-center justify-between gap-3 bg-yellow-900/20 border border-yellow-700 rounded-xl px-5 py-4">
+        <div className="flex items-center gap-3">
+          <Clock className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+          <div>
+            <p className="text-yellow-400 font-chakra text-sm uppercase font-bold tracking-wider">Verification Incomplete</p>
+            <p className="text-yellow-300/70 text-xs mt-0.5">You started KYC but haven't finished. Resume to complete it.</p>
+          </div>
+        </div>
+        {kycSessionUrl ? (
+          <a
+            href={kycSessionUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 flex items-center gap-1.5 bg-yellow-600 hover:bg-yellow-500 text-white font-chakra uppercase text-xs px-4 py-2 rounded-lg transition-all"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Resume KYC
+          </a>
+        ) : (
+          <button
+            onClick={onStartKYC}
+            className="flex-shrink-0 bg-yellow-600 hover:bg-yellow-500 text-white font-chakra uppercase text-xs px-4 py-2 rounded-lg transition-all"
+          >
+            Resume KYC
+          </button>
+        )}
       </div>
     );
   }

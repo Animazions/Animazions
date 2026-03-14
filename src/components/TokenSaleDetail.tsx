@@ -24,23 +24,12 @@ export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
   const [showPurchase, setShowPurchase] = useState(false);
 
   const { user } = useAuth();
-  const { isVerified, kycStatus, startKYCSession, refetch } = useKYCStatus();
+  const { isVerified, kycStatus, kycSessionUrl, startKYCSession, refetch } = useKYCStatus();
 
   const sale = useMemo(() => {
     return (getSaleById(saleId) ?? getSaleById(1))!;
   }, [saleId]);
 
-  const handleJoinSale = () => {
-    if (!user) {
-      setShowSignUp(true);
-      return;
-    }
-    if (!isVerified) {
-      setShowKYC(true);
-      return;
-    }
-    setShowPurchase(true);
-  };
 
   const roadmap = useMemo(() => {
     if (saleId === 2) {
@@ -69,12 +58,26 @@ export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
     if (!user) return 'Sign Up to Join Sale';
     if (!isVerified) {
       if (kycStatus === 'pending') return 'KYC Pending — Awaiting Review';
+      if (kycStatus === 'initiated') return 'Resume KYC Verification';
       return 'Complete KYC to Join Sale';
     }
     return 'Join Sale';
   };
 
   const joinButtonDisabled = kycStatus === 'pending';
+
+  const handleJoinSaleClick = () => {
+    if (!user) { setShowSignUp(true); return; }
+    if (!isVerified) {
+      if (kycStatus === 'initiated' && kycSessionUrl) {
+        window.open(kycSessionUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      setShowKYC(true);
+      return;
+    }
+    setShowPurchase(true);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white pt-24">
@@ -303,7 +306,7 @@ export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
                 )}
 
                 <button
-                  onClick={handleJoinSale}
+                  onClick={handleJoinSaleClick}
                   disabled={joinButtonDisabled}
                   className="w-full bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-chakra uppercase text-sm py-4 rounded-lg transition-all hover:scale-105 font-bold tracking-wider mb-3"
                 >

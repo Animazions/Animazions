@@ -101,7 +101,8 @@ Deno.serve(async (req: Request) => {
       .upsert({
         id: user.id,
         kyc_session_id: sessionId,
-        kyc_status: "pending",
+        kyc_session_url: sessionUrl,
+        kyc_status: "initiated",
         updated_at: new Date().toISOString(),
       }, { onConflict: "id" });
 
