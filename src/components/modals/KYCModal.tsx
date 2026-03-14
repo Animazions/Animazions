@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, ShieldCheck, Loader, AlertCircle, ExternalLink } from 'lucide-react';
+import { X, ShieldCheck, Loader, AlertCircle, ExternalLink, CheckCircle } from 'lucide-react';
 
 interface KYCModalProps {
   isOpen: boolean;
@@ -9,7 +9,7 @@ interface KYCModalProps {
 }
 
 export function KYCModal({ isOpen, onClose, onStartKYC, onKYCComplete }: KYCModalProps) {
-  const [step, setStep] = useState<'intro' | 'loading' | 'iframe' | 'error'>('intro');
+  const [step, setStep] = useState<'intro' | 'loading' | 'pending' | 'error'>('intro');
   const [sessionUrl, setSessionUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +23,8 @@ export function KYCModal({ isOpen, onClose, onStartKYC, onKYCComplete }: KYCModa
       return;
     }
     setSessionUrl(session_url);
-    setStep('iframe');
+    setStep('pending');
+    window.open(session_url, '_blank', 'noopener,noreferrer');
   };
 
   const handleClose = () => {
@@ -33,20 +34,11 @@ export function KYCModal({ isOpen, onClose, onStartKYC, onKYCComplete }: KYCModa
     onClose();
   };
 
-  const handleIframeMessage = (event: MessageEvent) => {
-    if (event.data?.type === 'DIDIT_VERIFICATION_COMPLETE' || event.data?.status === 'approved') {
-      onKYCComplete();
-      handleClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className={`bg-gray-900 border border-gray-700 rounded-2xl w-full overflow-hidden transition-all ${
-        step === 'iframe' ? 'max-w-2xl' : 'max-w-md'
-      }`}>
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md overflow-hidden">
         <div className="bg-[#E70606] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <ShieldCheck className="w-5 h-5" />
@@ -105,36 +97,40 @@ export function KYCModal({ isOpen, onClose, onStartKYC, onKYCComplete }: KYCModa
           </div>
         )}
 
-        {step === 'iframe' && sessionUrl && (
-          <div className="flex flex-col">
-            <div className="px-4 py-3 bg-gray-800 border-b border-gray-700 flex items-center justify-between">
-              <p className="text-xs text-gray-400 font-jost">Complete verification in the window below</p>
-              <a
-                href={sessionUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-[#E70606] hover:text-red-400 transition-colors"
-              >
-                Open in new tab <ExternalLink className="w-3 h-3" />
-              </a>
+        {step === 'pending' && sessionUrl && (
+          <div className="p-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
+                <ExternalLink className="w-10 h-10 text-[#E70606]" />
+              </div>
             </div>
-            <iframe
-              src={sessionUrl}
-              className="w-full"
-              style={{ height: '600px', border: 'none' }}
-              allow="camera; microphone"
-              onLoad={() => {
-                window.addEventListener('message', handleIframeMessage);
-              }}
-            />
-            <div className="p-4 border-t border-gray-700">
-              <button
-                onClick={() => { onKYCComplete(); handleClose(); }}
-                className="w-full border border-gray-600 hover:border-[#E70606] text-gray-300 hover:text-white font-chakra uppercase text-xs py-3 rounded-lg transition-all"
-              >
-                I have completed verification
-              </button>
-            </div>
+
+            <h3 className="font-jost text-xl font-bold text-center mb-3">Complete Verification</h3>
+            <p className="text-gray-400 text-center text-sm leading-relaxed mb-6">
+              A new tab has opened with your verification session. Complete the process there, then return here and click the button below.
+            </p>
+
+            <a
+              href={sessionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full border border-gray-600 hover:border-[#E70606] text-gray-300 hover:text-white font-chakra uppercase text-xs py-3 rounded-lg transition-all mb-3"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Reopen verification tab
+            </a>
+
+            <button
+              onClick={() => { onKYCComplete(); handleClose(); }}
+              className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra uppercase text-sm py-4 rounded-lg transition-all hover:scale-105 font-bold tracking-wider flex items-center justify-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5" />
+              I have completed verification
+            </button>
+
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Your status will update automatically once Didit processes your submission.
+            </p>
           </div>
         )}
 
