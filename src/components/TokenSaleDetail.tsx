@@ -1,6 +1,12 @@
 import { Clock, Users, Target, Shield, Zap, Heart } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { getSaleById } from '../data/salesData';
+import { useAuth } from '../contexts/AuthContext';
+import { useKYCStatus } from '../hooks/useKYCStatus';
+import { KYCModal } from './modals/KYCModal';
+import { PurchaseModal } from './modals/PurchaseModal';
+import { LoginModal } from './modals/LoginModal';
+import { SignUpModal } from './modals/SignUpModal';
 
 interface TokenSaleDetailProps {
   saleId?: number;
@@ -12,14 +18,28 @@ export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
   const [activeTab, setActiveTab] = useState('details');
   const [liked, setLiked] = useState(false);
 
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [showKYC, setShowKYC] = useState(false);
+  const [showPurchase, setShowPurchase] = useState(false);
+
+  const { user } = useAuth();
+  const { isVerified, kycStatus, startKYCSession, refetch } = useKYCStatus();
+
   const sale = useMemo(() => {
     return (getSaleById(saleId) ?? getSaleById(1))!;
   }, [saleId]);
 
-  const handleBuy = () => {
-    if (amount && parseFloat(amount) > 0) {
-      console.log(`Purchasing ${amount} ${sale.symbol} tokens`);
+  const handleJoinSale = () => {
+    if (!user) {
+      setShowSignUp(true);
+      return;
     }
+    if (!isVerified) {
+      setShowKYC(true);
+      return;
+    }
+    setShowPurchase(true);
   };
 
   const roadmap = useMemo(() => {
@@ -44,6 +64,17 @@ export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
     { name: 'Jordan Lee', role: 'CTO', image: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=200' },
     { name: 'Maria Garcia', role: 'Lead Developer', image: 'https://images.pexels.com/photos/1987301/pexels-photo-1987301.jpeg?auto=compress&cs=tinysrgb&w=200' },
   ];
+
+  const joinButtonLabel = () => {
+    if (!user) return 'Sign Up to Join Sale';
+    if (!isVerified) {
+      if (kycStatus === 'pending') return 'KYC Pending — Awaiting Review';
+      return 'Complete KYC to Join Sale';
+    }
+    return 'Join Sale';
+  };
+
+  const joinButtonDisabled = kycStatus === 'pending';
 
   return (
     <div className="min-h-screen bg-black text-white pt-24">
@@ -253,27 +284,30 @@ export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="block text-sm font-chakra uppercase mb-3 text-gray-300">Amount ({sale.symbol})</label>
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-[#E70606] focus:outline-none"
-                  />
-                  {amount && (
-                    <p className="text-xs text-gray-400 mt-2">
-                      ≈ ${(parseFloat(amount) * parseFloat(sale.tokenPrice)).toFixed(2)} USDC
-                    </p>
-                  )}
-                </div>
+                {user && (
+                  <div className="mb-5">
+                    <label className="block text-sm font-chakra uppercase mb-3 text-gray-300">Amount ({sale.symbol})</label>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-[#E70606] focus:outline-none"
+                    />
+                    {amount && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        ≈ ${(parseFloat(amount) * parseFloat(sale.tokenPrice)).toFixed(2)} USDC
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <button
-                  onClick={handleBuy}
-                  className="w-full bg-[#E70606] hover:bg-[#c00505] text-white font-chakra uppercase text-sm py-4 rounded-lg transition-all hover:scale-105 font-bold tracking-wider mb-3"
+                  onClick={handleJoinSale}
+                  disabled={joinButtonDisabled}
+                  className="w-full bg-[#E70606] hover:bg-[#c00505] disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-chakra uppercase text-sm py-4 rounded-lg transition-all hover:scale-105 font-bold tracking-wider mb-3"
                 >
-                  Join Sale
+                  {joinButtonLabel()}
                 </button>
 
                 <button
@@ -307,6 +341,35 @@ export function TokenSaleDetail({ saleId = 1 }: TokenSaleDetailProps) {
           </div>
         </div>
       </section>
+
+      <LoginModal
+        isOpen={showLogin}
+        onClose={() => setShowLogin(false)}
+        onSignUpClick={() => { setShowLogin(false); setShowSignUp(true); }}
+        onForgotPasswordClick={() => setShowLogin(false)}
+      />
+
+      <SignUpModal
+        isOpen={showSignUp}
+        onClose={() => setShowSignUp(false)}
+        onLoginClick={() => { setShowSignUp(false); setShowLogin(true); }}
+      />
+
+      <KYCModal
+        isOpen={showKYC}
+        onClose={() => setShowKYC(false)}
+        onStartKYC={startKYCSession}
+        onKYCComplete={() => { refetch(); setShowKYC(false); }}
+      />
+
+      <PurchaseModal
+        isOpen={showPurchase}
+        onClose={() => setShowPurchase(false)}
+        saleSymbol={sale.symbol}
+        tokenPrice={sale.tokenPrice}
+        minBuy={sale.minBuy}
+        maxBuy={sale.maxBuy}
+      />
     </div>
   );
 }

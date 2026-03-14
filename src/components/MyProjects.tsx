@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, Play, Loader, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useKYCStatus } from '../hooks/useKYCStatus';
+import { KYCStatusBanner } from './KYCStatusBanner';
+import { KYCModal } from './modals/KYCModal';
 
 interface Project {
   id: string;
@@ -23,6 +26,9 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
   const [creatingProject, setCreatingProject] = useState(false);
   const [error, setError] = useState('');
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showKYC, setShowKYC] = useState(false);
+
+  const { kycStatus, startKYCSession, refetch } = useKYCStatus();
 
   useEffect(() => {
     if (!user) return;
@@ -134,6 +140,12 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
       <section className="py-12 px-6 md:px-12 lg:px-24">
         <div className="max-w-[1440px] mx-auto">
           {user && (
+            <div className="mb-6">
+              <KYCStatusBanner kycStatus={kycStatus} onStartKYC={() => setShowKYC(true)} />
+            </div>
+          )}
+
+          {user && (
             <div className="mb-8 flex items-center justify-between p-4 bg-gray-900 border border-gray-700 rounded-lg">
               <div>
                 <p className="text-xs text-gray-400 mb-1">Logged in as</p>
@@ -238,6 +250,13 @@ export function MyProjects({ onNavigate }: MyProjectsProps) {
           )}
         </div>
       </section>
+
+      <KYCModal
+        isOpen={showKYC}
+        onClose={() => setShowKYC(false)}
+        onStartKYC={startKYCSession}
+        onKYCComplete={() => { refetch(); setShowKYC(false); }}
+      />
     </div>
   );
 }
