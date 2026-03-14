@@ -18,16 +18,22 @@ async function getAccessToken(appId: string, appKey: string): Promise<string> {
     }),
   });
 
+  const tokenText = await tokenRes.text();
   if (!tokenRes.ok) {
-    const errText = await tokenRes.text();
-    throw new Error(`Didit auth failed (${tokenRes.status}): ${errText}`);
+    throw new Error(`Didit auth failed [${tokenRes.status}]: ${tokenText}`);
   }
 
-  const tokenData = await tokenRes.json();
-  if (!tokenData.access_token) {
-    throw new Error(`Didit auth response missing access_token: ${JSON.stringify(tokenData)}`);
+  let tokenData: Record<string, unknown>;
+  try {
+    tokenData = JSON.parse(tokenText);
+  } catch {
+    throw new Error(`Didit auth non-JSON response: ${tokenText}`);
   }
-  return tokenData.access_token;
+
+  if (!tokenData.access_token) {
+    throw new Error(`Didit auth missing access_token: ${tokenText}`);
+  }
+  return tokenData.access_token as string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -58,9 +64,16 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const DIDIT_APP_ID = Deno.env.get("DIDIT_APP_ID")!;
-    const DIDIT_APP_KEY = Deno.env.get("DIDIT_APP_KEY")!;
-    const DIDIT_WORKFLOW_ID = Deno.env.get("DIDIT_WORKFLOW_ID")!;
+    const DIDIT_APP_ID = Deno.env.get("DIDIT_APP_ID");
+    const DIDIT_APP_KEY = Deno.env.get("DIDIT_APP_KEY");
+    const DIDIT_WORKFLOW_ID = Deno.env.get("DIDIT_WORKFLOW_ID");
+
+    if (!DIDIT_APP_ID || !DIDIT_APP_KEY || !DIDIT_WORKFLOW_ID) {
+      return new Response(
+        JSON.stringify({ error: `Missing Didit config: APP_ID=${!!DIDIT_APP_ID} APP_KEY=${!!DIDIT_APP_KEY} WORKFLOW_ID=${!!DIDIT_WORKFLOW_ID}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const accessToken = await getAccessToken(DIDIT_APP_ID, DIDIT_APP_KEY);
 
@@ -77,15 +90,23 @@ Deno.serve(async (req: Request) => {
       }),
     });
 
+    const sessionText = await sessionRes.text();
     if (!sessionRes.ok) {
-      const errText = await sessionRes.text();
       return new Response(
-        JSON.stringify({ error: "Failed to create KYC session", details: errText }),
+        JSON.stringify({ error: `Didit session failed [${sessionRes.status}]: ${sessionText}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const sessionData = await sessionRes.json();
+    let sessionData: Record<string, unknown>;
+    try {
+      sessionData = JSON.parse(sessionText);
+    } catch {
+      return new Response(
+        JSON.stringify({ error: `Didit session non-JSON: ${sessionText}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -109,7 +130,7 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
