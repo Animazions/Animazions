@@ -146,7 +146,9 @@ export function KYCModal({ isOpen, onClose, onStartKYC, onKYCComplete }: KYCModa
               </div>
             </div>
             <h3 className="font-jost text-xl font-bold text-center mb-3">Verification Error</h3>
-            <p className="text-red-400 text-center text-sm mb-6">{error}</p>
+            <div className="bg-gray-800 border border-red-700/40 rounded-lg p-3 mb-6 max-h-48 overflow-y-auto">
+              <p className="text-red-400 text-xs font-mono break-all whitespace-pre-wrap">{error}</p>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setStep('intro')}

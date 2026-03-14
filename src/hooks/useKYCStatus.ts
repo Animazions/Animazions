@@ -52,14 +52,25 @@ export function useKYCStatus() {
         }
       );
 
-      const data = await res.json();
+      let data: Record<string, unknown>;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text().catch(() => '(unreadable)');
+        return { session_url: null, error: `HTTP ${res.status} — non-JSON response: ${text}` };
+      }
+
       if (!res.ok) {
-        const detail = data.details ? ` — ${data.details}` : '';
-        return { session_url: null, error: (data.error ?? 'Failed to start KYC') + detail };
+        const detail = data.details ? `\n${data.details}` : '';
+        return { session_url: null, error: `[${res.status}] ${data.error ?? 'Failed to start KYC'}${detail}` };
+      }
+
+      if (!data.session_url) {
+        return { session_url: null, error: `No session_url in response: ${JSON.stringify(data)}` };
       }
 
       await fetchKYCStatus();
-      return { session_url: data.session_url, error: null };
+      return { session_url: data.session_url as string, error: null };
     } catch (err: unknown) {
       return { session_url: null, error: err instanceof Error ? err.message : 'Unknown error' };
     }
