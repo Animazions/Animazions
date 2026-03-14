@@ -6,35 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-async function getAccessToken(appId: string, appKey: string): Promise<string> {
-  const tokenRes = await fetch("https://auth.didit.me/auth/v2/token/", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: appId,
-      client_secret: appKey,
-    }),
-  });
-
-  const tokenText = await tokenRes.text();
-  if (!tokenRes.ok) {
-    throw new Error(`Didit auth failed [${tokenRes.status}]: ${tokenText}`);
-  }
-
-  let tokenData: Record<string, unknown>;
-  try {
-    tokenData = JSON.parse(tokenText);
-  } catch {
-    throw new Error(`Didit auth non-JSON response: ${tokenText}`);
-  }
-
-  if (!tokenData.access_token) {
-    throw new Error(`Didit auth missing access_token: ${tokenText}`);
-  }
-  return tokenData.access_token as string;
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -63,24 +34,21 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const DIDIT_APP_ID = Deno.env.get("DIDIT_APP_ID");
     const DIDIT_APP_KEY = Deno.env.get("DIDIT_APP_KEY");
     const DIDIT_WORKFLOW_ID = Deno.env.get("DIDIT_WORKFLOW_ID");
 
-    if (!DIDIT_APP_ID || !DIDIT_APP_KEY || !DIDIT_WORKFLOW_ID) {
+    if (!DIDIT_APP_KEY || !DIDIT_WORKFLOW_ID) {
       return new Response(
-        JSON.stringify({ error: `Missing Didit config: APP_ID=${!!DIDIT_APP_ID} APP_KEY=${!!DIDIT_APP_KEY} WORKFLOW_ID=${!!DIDIT_WORKFLOW_ID}` }),
+        JSON.stringify({ error: `Missing Didit config: APP_KEY=${!!DIDIT_APP_KEY} WORKFLOW_ID=${!!DIDIT_WORKFLOW_ID}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const accessToken = await getAccessToken(DIDIT_APP_ID, DIDIT_APP_KEY);
 
     const sessionRes = await fetch("https://verification.didit.me/v3/session/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
+        "x-api-key": DIDIT_APP_KEY,
       },
       body: JSON.stringify({
         workflow_id: DIDIT_WORKFLOW_ID,
@@ -124,7 +92,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         session_id: sessionData.session_id ?? sessionData.id,
-        session_url: sessionData.url ?? sessionData.session_url,
+        session_url: sessionData.verification_url ?? sessionData.url ?? sessionData.session_url,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
