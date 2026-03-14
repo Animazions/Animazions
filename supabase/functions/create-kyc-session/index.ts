@@ -35,36 +35,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const DIDIT_APP_ID = Deno.env.get("DIDIT_APP_ID")!;
-    const DIDIT_APP_KEY = Deno.env.get("DIDIT_APP_KEY")!;
+    const DIDIT_API_KEY = Deno.env.get("DIDIT_APP_KEY")!;
     const DIDIT_WORKFLOW_ID = Deno.env.get("DIDIT_WORKFLOW_ID")!;
-
-    const tokenRes = await fetch("https://auth.didit.me/auth/v2/token/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: DIDIT_APP_ID,
-        client_secret: DIDIT_APP_KEY,
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      const errText = await tokenRes.text();
-      return new Response(JSON.stringify({ error: "Failed to authenticate with Didit", details: errText }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const tokenData = await tokenRes.json();
-    const accessToken = tokenData.access_token;
 
     const sessionRes = await fetch("https://verification.didit.me/v3/session/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
+        "x-api-key": DIDIT_API_KEY,
       },
       body: JSON.stringify({
         workflow_id: DIDIT_WORKFLOW_ID,
@@ -75,10 +53,10 @@ Deno.serve(async (req: Request) => {
 
     if (!sessionRes.ok) {
       const errText = await sessionRes.text();
-      return new Response(JSON.stringify({ error: "Failed to create KYC session", details: errText }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Failed to create KYC session", details: errText }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const sessionData = await sessionRes.json();
